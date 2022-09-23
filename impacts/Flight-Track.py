@@ -11,7 +11,7 @@ model = {
     "name": "P3",
     "availability": "{}/{}",
     "model": {
-        "gltf":"https://fcx-czml.s3.amazonaws.com/img/er2.gltf",
+        "gltf":"https://fcx-czml.s3.amazonaws.com/img/p3.gltf",
         "scale": 900.0,
         "minimumPixelSize": 500,
         "maximumScale": 1000.0
