@@ -134,7 +134,8 @@ def process_tracks():
     plane = 'P3B'
     fdate='2020-02-05'
     sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-    infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+    # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+    infile = glob('../.DS_Sore/flight_impact_raw/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
     #-----------------------------
 
     track = FlightTrackReader(infile,plane)
@@ -150,7 +151,15 @@ def process_tracks():
    #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
     outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
 
-    s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+    print(">>>", output_name)
+    fo = open(f'../.DS_Sore/flightPathOutputs/{output_name}.json', "w")
+    # Write a line at the end of the file.
+    fo.seek(0, 0)
+    line = fo.write( writer.get_string() )
+    fo.close()
+    print("DONE!!!!!!!")
+    return
+    # s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
     
 
 process_tracks()
