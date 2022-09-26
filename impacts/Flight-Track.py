@@ -12,8 +12,7 @@ model = {
     "availability": "{}/{}",
     "model": {
         "gltf":"https://fcx-czml.s3.amazonaws.com/img/p3.gltf",
-        "scale": 900.0,
-        "minimumPixelSize": 500,
+        "scale": 1.0,
         "maximumScale": 1000.0
     },
     "position": {
@@ -103,10 +102,12 @@ class FlightTrackReader:
     def read_csv(self,nskip=1):
         df = pd.read_csv(self.file,index_col=None,usecols=self.useCols, skiprows=self.hlines)
         df.columns = ['Time_s','Jday', 'lat','lon','alt','heading','pitch','roll']
-
+        # correction offsets for p3B model
+        headingCorrection = -90 #in degrees
+        pitchCorrection = +90 #in degrees
         df['heading'] = [ h if h<=180 else h-360 for h in df.heading]
-        df['heading'] = [ h * np.pi / 180. for h in df.heading]  #<--check if this is right
-        df['pitch'] = [ p * np.pi / 180. for p in df.pitch]
+        df['heading'] = [ (h+headingCorrection) * np.pi / 180. for h in df.heading]  #<--check if this is right
+        df['pitch'] = [ (p+pitchCorrection) * np.pi / 180. for p in df.pitch]
         df['roll'] = [ r * np.pi / 180. for r in df.roll]
         df['time_steps'] = [(t - df.Time_s[0]) for t in df.Time_s]
 
