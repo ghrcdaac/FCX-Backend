@@ -149,43 +149,40 @@ class FlightTrackReader:
 
 from glob import glob
 
-def process_tracks():
-
+def process_tracks(fDates, plane):
     s3_client = boto3.client('s3')
-
     #--------to be modified -----
-   #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
+    #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
     bucketOut = 'ghrc-fcx-viz-output'
-
-    plane = 'P3B'
-    fdate='2020-02-05'
-    sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-    # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-    infile = glob('../.DS_Sore/flight_impact_raw/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-    #-----------------------------
-
-    track = FlightTrackReader(infile,plane)
-    Nav = track.read_csv()
-    print(track.twindow)
-
-    writer = FlightTrackCzmlWriter(len(Nav), plane)
-    writer.set_time(track.twindow, Nav.time_steps)
-    writer.set_position(Nav.lon, Nav.lat, Nav.alt)
-    writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
-
-    output_name = os.path.splitext(os.path.basename(infile))[0]
-   #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
-    outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
-
-    print(">>>", output_name)
-    fo = open(f'../.DS_Sore/flightPathOutputs/{output_name}.json', "w")
-    # Write a line at the end of the file.
-    fo.seek(0, 0)
-    line = fo.write( writer.get_string() )
-    fo.close()
-    print("DONE!!!!!!!")
-    return
-    # s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
     
+    # do this for all raw files.
+    for fdate in fDates:
+        sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
+        # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        infile = glob('../.DS_Sore/flight_impact_raw/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+    #-----------------------------
+        track = FlightTrackReader(infile,plane)
+        Nav = track.read_csv()
 
-process_tracks()
+        writer = FlightTrackCzmlWriter(len(Nav), plane)
+        writer.set_time(track.twindow, Nav.time_steps)
+        writer.set_position(Nav.lon, Nav.lat, Nav.alt)
+        writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
+
+        output_name = os.path.splitext(os.path.basename(infile))[0]
+        #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
+        outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
+
+        print(">>>", output_name)
+        fo = open(f'../.DS_Sore/flightPathOutputs/{output_name}.czml', "w")
+        # Write a line at the end of the file.
+        fo.seek(0, 0)
+        line = fo.write( writer.get_string() )
+        fo.close()
+        print("DONE!!!!!!! for ", output_name)
+        # s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+
+fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
+fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
+process_tracks(fDatesP3B, 'P3B')
+process_tracks(fDatesER2, 'ER2')
