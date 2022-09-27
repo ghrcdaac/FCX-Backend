@@ -41,13 +41,31 @@ czml_head = {
     "name": "wall czml",
     "version": "1.0"
 }
+
 TrackColor = {'P3B': [0, 255, 128, 255],
               'ER2': [0, 255, 255, 128]}
+
+modelP3B = {
+        "gltf":"https://fcx-czml.s3.amazonaws.com/img/p3.gltf",
+        "scale": 5.0,
+        "maximumScale": 1000.0
+}
+
+modelER2 = {
+    "gltf":"https://fcx-czml.s3.amazonaws.com/img/er2.gltf",
+    "scale": 900.0,
+    "minimumPixelSize": 500,
+    "maximumScale": 1000.0
+}
+
+
 
 class FlightTrackCzmlWriter:
 
     def __init__(self, length, plane):
         self.model = deepcopy(model)
+        if (plane == 'P3B') : self.model['model'] = modelP3B
+        if (plane == 'ER2') : self.model['model'] = modelER2
         self.length = length
         self.model['name'] = plane
         self.model['path']['material']['solidColor']['color']['rgba'] = TrackColor[plane]
