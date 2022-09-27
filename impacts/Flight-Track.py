@@ -158,8 +158,7 @@ def process_tracks(fDates, plane):
     # do this for all raw files.
     for fdate in fDates:
         sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-        # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-        infile = glob('../.DS_Sore/flight_impact_raw/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
     #-----------------------------
         track = FlightTrackReader(infile,plane)
         Nav = track.read_csv()
@@ -173,14 +172,7 @@ def process_tracks(fDates, plane):
         #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
         outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
 
-        print(">>>", output_name)
-        fo = open(f'../.DS_Sore/flightPathOutputs/{output_name}.czml', "w")
-        # Write a line at the end of the file.
-        fo.seek(0, 0)
-        line = fo.write( writer.get_string() )
-        fo.close()
-        print("DONE!!!!!!! for ", output_name)
-        # s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
 
 fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
 fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
