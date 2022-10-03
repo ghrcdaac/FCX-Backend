@@ -121,15 +121,9 @@ class FlightTrackReader:
     def read_csv(self,nskip=1):
         df = pd.read_csv(self.file,index_col=None,usecols=self.useCols, skiprows=self.hlines)
         df.columns = ['Time_s','Jday', 'lat','lon','alt','heading','pitch','roll']
-        headingCorrection = 0 #in degrees
-        pitchCorrection = 0 #in degrees
-        rollCorrection = 0 #in degrees
-        # correction offsets for p3B model
+        headingCorrection = -90 # for both p3B and ER2 model
         if (self.plane == 'P3B'):
-            headingCorrection = -90
-            pitchCorrection = +90
-        elif (self.plane == 'ER2'):
-            headingCorrection = -90
+            pitchCorrection = +90 # pitch correction only for P3B model
         df['heading'] = [ h if h<=180 else h-360 for h in df.heading]
         df['heading'] = [ (h+headingCorrection) * np.pi / 180. for h in df.heading]
         df['pitch'] = [ (p+pitchCorrection) * np.pi / 180. for p in df.pitch]
