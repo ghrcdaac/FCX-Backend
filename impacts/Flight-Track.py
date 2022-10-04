@@ -122,6 +122,7 @@ class FlightTrackReader:
         df = pd.read_csv(self.file,index_col=None,usecols=self.useCols, skiprows=self.hlines)
         df.columns = ['Time_s','Jday', 'lat','lon','alt','heading','pitch','roll']
         headingCorrection = -90 # for both p3B and ER2 model
+        pitchCorrection = 0
         if (self.plane == 'P3B'):
             pitchCorrection = +90 # pitch correction only for P3B model
         df['heading'] = [ h if h<=180 else h-360 for h in df.heading]
@@ -152,7 +153,7 @@ def process_tracks(fDates, plane):
     # do this for all raw files.
     for fdate in fDates:
         sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-        infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        infile = glob('../data/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
     #-----------------------------
         track = FlightTrackReader(infile,plane)
         Nav = track.read_csv()
@@ -164,11 +165,19 @@ def process_tracks(fDates, plane):
 
         output_name = os.path.splitext(os.path.basename(infile))[0]
         #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
-        outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
+        if(plane == 'P3B'):
+            outfile = f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/p3/{output_name}"
+        elif(plane == 'ER2'):
+            outfile = f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/er2/{output_name}"
+            print(outfile)
+        
+        #outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
 
-        s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        #s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
 
 fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
-fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
-process_tracks(fDatesP3B, 'P3B')
+#fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
+fDatesER2 = ['2020-01-15']
+
+#process_tracks(fDatesP3B, 'P3B')
 process_tracks(fDatesER2, 'ER2')
