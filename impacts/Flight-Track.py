@@ -141,6 +141,12 @@ class FlightTrackReader:
         
         return df
 
+def getOutputFile(fdate, plane, output_name):
+    if(plane == 'P3B'):
+        return f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/p3/{output_name}"
+    elif(plane == 'ER2'):
+        return f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/er2/{output_name}"
+        # handle cases related to some different naming convention
 
 from glob import glob
 
@@ -148,12 +154,16 @@ def process_tracks(fDates, plane):
     s3_client = boto3.client('s3')
     #--------to be modified -----
     #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
-    bucketOut = 'ghrc-fcx-viz-output'
+    # bucketOut = 'ghrc-fcx-viz-output'
+    bucketOut = 'szg-ghrc-fcx-viz-output'
     
     # do this for all raw files.
     for fdate in fDates:
         sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-        infile = glob('../data/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        # infile = glob('../data/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        infile = glob('../.DS_Sore/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+
     #-----------------------------
         track = FlightTrackReader(infile,plane)
         Nav = track.read_csv()
@@ -164,20 +174,22 @@ def process_tracks(fDates, plane):
         writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
 
         output_name = os.path.splitext(os.path.basename(infile))[0]
-        #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
-        if(plane == 'P3B'):
-            outfile = f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/p3/{output_name}"
-        elif(plane == 'ER2'):
-            outfile = f"ghrc-fcx-viz-output/fieldcampaign/impacts/{fdate}/er2/{output_name}"
-            print(outfile)
-        
         #outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
-
-        #s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        # outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
+        outfile = getOutputFile(fdate, plane, output_name)
+        
+        # previous file rename as '{prevName}_bck'
+        #  if previous file, only perform this operation
+        find_files = s3_client.list_objects(Bucket=bucketOut, Prefix=outfile)
+        if (find_files["ResponseMetadata"]["HTTPStatusCode"] == 200):
+            print(find_files)
+            # s3_client.copy_object(Bucket=bucketOut, CopySource=f'{bucketOut}/{outfile}', Key=f'{outfile}_bck')
+            # s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}')
+        # # then upload
+        # s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
 
 fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
-#fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
-fDatesER2 = ['2020-01-15']
-
-#process_tracks(fDatesP3B, 'P3B')
-process_tracks(fDatesER2, 'ER2')
+fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
+# fDatesER2 = ['2020-01-15']
+process_tracks(fDatesP3B, 'P3B')
+# process_tracks(fDatesER2, 'ER2') // will need some correction on naming convention
