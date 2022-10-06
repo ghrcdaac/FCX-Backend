@@ -161,15 +161,15 @@ def process_tracks(fDates, plane):
     s3_client = boto3.client('s3')
     #--------to be modified -----
     #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
-    # bucketOut = 'ghrc-fcx-viz-output'
-    bucketOut = 'szg-ghrc-fcx-viz-output'
+    bucketOut = 'ghrc-fcx-viz-output'
     
     # do this for all raw files.
     for fdate in fDates:
         sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-        # infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-        # infile = glob('../data/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-        infile = glob('../.DS_Sore/*/*/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+        # infile is the folder in local, where the raw data sits.
+        # the location should be with respect to the Flight-Track.py file
+        # while executing it from the dir same as Flight-Track.py
+        infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
 
     #-----------------------------
         track = FlightTrackReader(infile,plane)
@@ -181,7 +181,6 @@ def process_tracks(fDates, plane):
         writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
 
         output_name = os.path.splitext(os.path.basename(infile))[0]
-        #outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
         outfile = getOutputFile(fdate, plane, output_name)
 
         backup_file_s3(bucketOut, outfile)
