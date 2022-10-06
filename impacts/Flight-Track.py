@@ -149,8 +149,11 @@ def getOutputFile(fdate, plane, output_name):
     if(plane == 'P3B'):
         return f"fieldcampaign/impacts/{fdate}/p3/{output_name}"
     elif(plane == 'ER2'):
-        return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
-        # handle cases related to some different naming convention
+        if(fdate == "2020-02-25"):
+            # correction on naming convention for some ER2
+            return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
+        # general naming convention for ER2
+        return f"fieldcampaign/impacts/{fdate}/er2/FCX_{output_name}.czml"
 
 from glob import glob
 
@@ -186,9 +189,7 @@ def process_tracks(fDates, plane):
         s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
         print(f'Upload complete.\n\n')
 
-# fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
-fDatesP3B = ['2020-02-25']
+fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
 fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
-# fDatesER2 = ['2020-01-15']
 process_tracks(fDatesP3B, 'P3B')
-# process_tracks(fDatesER2, 'ER2') // will need some correction on naming convention
+process_tracks(fDatesER2, 'ER2')
