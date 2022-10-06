@@ -4,7 +4,11 @@ from copy import deepcopy
 import json
 import boto3
 import os
+import sys
 from datetime import datetime, timedelta
+
+sys.path.append("../")
+from utils.s3_updnload import backup_file_s3
 
 model = {
     "id": "Flight Track",
@@ -141,6 +145,15 @@ class FlightTrackReader:
         
         return df
 
+def getOutputFile(fdate, plane, output_name):
+    if(plane == 'P3B'):
+        return f"fieldcampaign/impacts/{fdate}/p3/{output_name}"
+    elif(plane == 'ER2'):
+        if(fdate == "2020-02-25"):
+            # correction on naming convention for some ER2
+            return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
+        # general naming convention for ER2
+        return f"fieldcampaign/impacts/{fdate}/er2/FCX_{output_name}.czml"
 
 from glob import glob
 
@@ -153,7 +166,11 @@ def process_tracks(fDates, plane):
     # do this for all raw files.
     for fdate in fDates:
         sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
+        # infile is the folder in local, where the raw data sits.
+        # the location should be with respect to the Flight-Track.py file
+        # while executing it from the dir same as Flight-Track.py
         infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
+
     #-----------------------------
         track = FlightTrackReader(infile,plane)
         Nav = track.read_csv()
@@ -164,10 +181,12 @@ def process_tracks(fDates, plane):
         writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
 
         output_name = os.path.splitext(os.path.basename(infile))[0]
-        #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
-        outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
+        outfile = getOutputFile(fdate, plane, output_name)
 
+        backup_file_s3(bucketOut, outfile)
+        print(f'uploading new {outfile} in {bucketOut} bucket.')
         s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        print(f'Upload complete.\n\n')
 
 fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
 fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
