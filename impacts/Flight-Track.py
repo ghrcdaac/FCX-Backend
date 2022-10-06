@@ -4,16 +4,19 @@ from copy import deepcopy
 import json
 import boto3
 import os
+import sys
 from datetime import datetime, timedelta
+
+sys.path.append("../")
+from utils.s3_updnload import backup_file_s3
 
 model = {
     "id": "Flight Track",
     "name": "P3",
     "availability": "{}/{}",
     "model": {
-        "gltf":"https://fcx-czml.s3.amazonaws.com/img/er2.gltf",
-        "scale": 900.0,
-        "minimumPixelSize": 500,
+        "gltf":"https://fcx-czml.s3.amazonaws.com/img/p3.gltf",
+        "scale": 1.0,
         "maximumScale": 1000.0
     },
     "position": {
@@ -42,13 +45,31 @@ czml_head = {
     "name": "wall czml",
     "version": "1.0"
 }
+
 TrackColor = {'P3B': [0, 255, 128, 255],
               'ER2': [0, 255, 255, 128]}
+
+modelP3B = {
+        "gltf":"https://fcx-czml.s3.amazonaws.com/img/p3.gltf",
+        "scale": 5.0,
+        "maximumScale": 1000.0
+}
+
+modelER2 = {
+    "gltf":"https://fcx-czml.s3.amazonaws.com/img/er2.gltf",
+    "scale": 900.0,
+    "minimumPixelSize": 500,
+    "maximumScale": 1000.0
+}
+
+
 
 class FlightTrackCzmlWriter:
 
     def __init__(self, length, plane):
         self.model = deepcopy(model)
+        if (plane == 'P3B') : self.model['model'] = modelP3B
+        if (plane == 'ER2') : self.model['model'] = modelER2
         self.length = length
         self.model['name'] = plane
         self.model['path']['material']['solidColor']['color']['rgba'] = TrackColor[plane]
@@ -99,14 +120,18 @@ class FlightTrackReader:
         self.file = file
         self.hlines = il
         self.useCols = cols
+        self.plane = plane
 
     def read_csv(self,nskip=1):
         df = pd.read_csv(self.file,index_col=None,usecols=self.useCols, skiprows=self.hlines)
         df.columns = ['Time_s','Jday', 'lat','lon','alt','heading','pitch','roll']
-
+        headingCorrection = -90 # for both p3B and ER2 model
+        pitchCorrection = 0 # initial value
+        if (self.plane == 'P3B'):
+            pitchCorrection = +90 # pitch correction only for P3B model
         df['heading'] = [ h if h<=180 else h-360 for h in df.heading]
-        df['heading'] = [ h * np.pi / 180. for h in df.heading]  #<--check if this is right
-        df['pitch'] = [ p * np.pi / 180. for p in df.pitch]
+        df['heading'] = [ (h+headingCorrection) * np.pi / 180. for h in df.heading]
+        df['pitch'] = [ (p+pitchCorrection) * np.pi / 180. for p in df.pitch]
         df['roll'] = [ r * np.pi / 180. for r in df.roll]
         df['time_steps'] = [(t - df.Time_s[0]) for t in df.Time_s]
 
@@ -120,37 +145,50 @@ class FlightTrackReader:
         
         return df
 
+def getOutputFile(fdate, plane, output_name):
+    if(plane == 'P3B'):
+        return f"fieldcampaign/impacts/{fdate}/p3/{output_name}"
+    elif(plane == 'ER2'):
+        if(fdate == "2020-02-25"):
+            # correction on naming convention for some ER2
+            return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
+        # general naming convention for ER2
+        return f"fieldcampaign/impacts/{fdate}/er2/FCX_{output_name}.czml"
 
 from glob import glob
 
-def process_tracks():
-
+def process_tracks(fDates, plane):
     s3_client = boto3.client('s3')
-
     #--------to be modified -----
-   #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
+    #bucketOut = os.environ['OUTPUT_DATA_BUCKET']
     bucketOut = 'ghrc-fcx-viz-output'
-
-    plane = 'P3B'
-    fdate='2020-02-05'
-    sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
-    infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
-    #-----------------------------
-
-    track = FlightTrackReader(infile,plane)
-    Nav = track.read_csv()
-    print(track.twindow)
-
-    writer = FlightTrackCzmlWriter(len(Nav), plane)
-    writer.set_time(track.twindow, Nav.time_steps)
-    writer.set_position(Nav.lon, Nav.lat, Nav.alt)
-    writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
-
-    output_name = os.path.splitext(os.path.basename(infile))[0]
-   #outfile = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/impacts/flight_track/{output_name}"
-    outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
-
-    s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
     
+    # do this for all raw files.
+    for fdate in fDates:
+        sdate=fdate.split('-')[0]+fdate.split('-')[1]+fdate.split('-')[2]
+        # infile is the folder in local, where the raw data sits.
+        # the location should be with respect to the Flight-Track.py file
+        # while executing it from the dir same as Flight-Track.py
+        infile = glob('data/IMPACTS_MetNav_'+plane+'_'+sdate+'*.ict')[0]
 
-process_tracks()
+    #-----------------------------
+        track = FlightTrackReader(infile,plane)
+        Nav = track.read_csv()
+
+        writer = FlightTrackCzmlWriter(len(Nav), plane)
+        writer.set_time(track.twindow, Nav.time_steps)
+        writer.set_position(Nav.lon, Nav.lat, Nav.alt)
+        writer.set_orientation(Nav.roll, Nav.pitch, Nav.heading)
+
+        output_name = os.path.splitext(os.path.basename(infile))[0]
+        outfile = getOutputFile(fdate, plane, output_name)
+
+        backup_file_s3(bucketOut, outfile)
+        print(f'uploading new {outfile} in {bucketOut} bucket.')
+        s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        print(f'Upload complete.\n\n')
+
+fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
+fDatesER2 = ['2020-02-27', '2020-02-25', '2020-02-07', '2020-02-05',  '2020-02-01', '2020-01-25', '2020-01-18']
+process_tracks(fDatesP3B, 'P3B')
+process_tracks(fDatesER2, 'ER2')
