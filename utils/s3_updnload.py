@@ -121,3 +121,36 @@ def cpmv_s3(s3bucket, oldFolder, newFolder, action='cp'):
             s3.Object(s3bucket, destPath).copy_from(CopySource=Source)
             if (action == 'mv'):
                 s3.Object(s3bucket, srcKey).delete()
+
+def backup_file_s3(bucketOut, outfile):
+    """
+    If there is already an outfile in the bucketout,
+    backup that previous outfile
+    Then upload the new outfile
+    Note: If there is already a backup outfile, it will remove that first
+    """
+    s3_client = boto3.client('s3')
+    # 1. Remove fileName_bck, if its there
+    try:
+        # if File_bck is Found
+        s3_client.head_object(Bucket=bucketOut, Key=f'{outfile}_bck')
+        print(f'File with "{outfile}_bck" name found.')
+        print('Deleting previous backup file...')
+        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}_bck')
+        print('Deletion complete.\n')
+    except:
+        # if file is not found
+        print(f'Previous backup file with name "{outfile}_bck" doesnot exists.\n')
+    # 2. If previous file available,
+    try:
+        # if File is Found
+        s3_client.head_object(Bucket=bucketOut, Key=outfile)
+        print(f'File with "{outfile}" name already exists.')
+        print('Backing previous file...')
+        # rename previous file as '{prevName}_bck'
+        s3_client.copy_object(Bucket=bucketOut, CopySource=f'{bucketOut}/{outfile}', Key=f'{outfile}_bck')
+        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}')
+        print('Backup complete.\n')
+    except:
+        # did not Find the File
+        print(f'File with "{outfile}" name doesnot exists.\n')

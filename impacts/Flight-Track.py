@@ -4,7 +4,11 @@ from copy import deepcopy
 import json
 import boto3
 import os
+import sys
 from datetime import datetime, timedelta
+
+sys.path.append("../")
+from utils.s3_updnload import backup_file_s3
 
 model = {
     "id": "Flight Track",
@@ -148,34 +152,6 @@ def getOutputFile(fdate, plane, output_name):
         return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
         # handle cases related to some different naming convention
 
-def backup_file_s3(bucketOut, outfile):
-    s3_client = boto3.client('s3')
-    # 1. Remove fileName_bck, if its there
-    try:
-        # if File_bck is Found
-        s3_client.head_object(Bucket=bucketOut, Key=f'{outfile}_bck')
-        print(f'File with "{outfile}_bck" name found\n')
-        print('Deleting previous backup file...\n')
-        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}_bck')
-        print('Deletion complete.\n')
-    except:
-        # if file is not found
-        print(f'Previous backup file with name "{outfile}_bck" doesnot exists.\n')
-    # 2. If previous file available,
-    # rename previous file as '{prevName}_bck'
-    try:
-        # if File is Found
-        s3_client.head_object(Bucket=bucketOut, Key=outfile)
-        print(f'File with "{outfile}" name already exists\n')
-        print('Backing previous file...\n')
-        # rename previous file as '{prevName}_bck'
-        s3_client.copy_object(Bucket=bucketOut, CopySource=f'{bucketOut}/{outfile}', Key=f'{outfile}_bck')
-        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}')
-        print('Backup complete.\n')
-    except:
-        # did not Find the File
-        print(f'File with "{outfile}" name doesnot exists.\n')
-
 from glob import glob
 
 def process_tracks(fDates, plane):
@@ -206,9 +182,9 @@ def process_tracks(fDates, plane):
         outfile = getOutputFile(fdate, plane, output_name)
 
         backup_file_s3(bucketOut, outfile)
-        print(f'uploading new {outfile} in {bucketOut} bucket.\n')
+        print(f'uploading new {outfile} in {bucketOut} bucket.')
         s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
-        print(f'Upload complete.\n')
+        print(f'Upload complete.\n\n')
 
 # fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
 fDatesP3B = ['2020-02-25']
