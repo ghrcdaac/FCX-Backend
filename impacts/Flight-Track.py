@@ -148,6 +148,34 @@ def getOutputFile(fdate, plane, output_name):
         return f"fieldcampaign/impacts/{fdate}/er2/{output_name}"
         # handle cases related to some different naming convention
 
+def backup_file_s3(bucketOut, outfile):
+    s3_client = boto3.client('s3')
+    # 1. Remove fileName_bck, if its there
+    try:
+        # if File_bck is Found
+        s3_client.head_object(Bucket=bucketOut, Key=f'{outfile}_bck')
+        print(f'File with "{outfile}_bck" name found\n')
+        print('Deleting previous backup file...\n')
+        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}_bck')
+        print('Deletion complete.\n')
+    except:
+        # if file is not found
+        print(f'Previous backup file with name "{outfile}_bck" doesnot exists.\n')
+    # 2. If previous file available,
+    # rename previous file as '{prevName}_bck'
+    try:
+        # if File is Found
+        s3_client.head_object(Bucket=bucketOut, Key=outfile)
+        print(f'File with "{outfile}" name already exists\n')
+        print('Backing previous file...\n')
+        # rename previous file as '{prevName}_bck'
+        s3_client.copy_object(Bucket=bucketOut, CopySource=f'{bucketOut}/{outfile}', Key=f'{outfile}_bck')
+        s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}')
+        print('Backup complete.\n')
+    except:
+        # did not Find the File
+        print(f'File with "{outfile}" name doesnot exists.\n')
+
 from glob import glob
 
 def process_tracks(fDates, plane):
@@ -177,24 +205,10 @@ def process_tracks(fDates, plane):
         #outfile = f"fieldcampaign/impacts/flight_track/{output_name}"
         outfile = getOutputFile(fdate, plane, output_name)
 
-        # remove sth_bck, if its there
-        # previous file rename as '{prevName}_bck'
-        # if previous file, only perform this operation
-        try:
-            # if its there, File is Found
-            s3_client.head_object(Bucket=bucketOut, Key=outfile)
-            print(f'File with {outfile} name already exists\n')
-            print('backing previous file...\n')
-            # TODO: check if bck, already exists, in  that case, delete the bck
-            s3_client.copy_object(Bucket=bucketOut, CopySource=f'{bucketOut}/{outfile}', Key=f'{outfile}_bck')
-            s3_client.delete_object(Bucket=bucketOut, Key=f'{outfile}')
-            print('backup complete.\n')
-        except:
-            # did not Find the File
-            print(f'File with {outfile} name doesnot exists.\n')
-        finally:
-            print(f'uploading new {outfile} in {bucketOut} bucket.\n')
-            s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        backup_file_s3(bucketOut, outfile)
+        print(f'uploading new {outfile} in {bucketOut} bucket.\n')
+        s3_client.put_object(Body=writer.get_string(), Bucket=bucketOut, Key=outfile)
+        print(f'Upload complete.\n')
 
 # fDatesP3B = ['2020-02-25', '2020-02-20', '2020-02-18', '2020-02-13', '2020-02-07', '2020-02-05', '2020-02-01', '2020-01-25', '2020-01-18']
 fDatesP3B = ['2020-02-25']
