@@ -11,19 +11,27 @@ from utils.s3_updnload import download_s3, upload_to_s3
 ########################################################
 
 def makeCZML(fdate):
-    s3bucket = os.getenv('RAW_DATA_BUCKET')
-    LIPpath = os.getenv('LIP_INPUT_PATH')
+    # s3bucket = os.getenv('RAW_DATA_BUCKET')
+    # LIPpath = os.getenv('LIP_INPUT_PATH')
 
-    sdate = fdate.replace('-', '')
+    # sdate = fdate.replace('-', '')
 
-    s3key = 'fieldcampaign/goesrplt/LIP/data/goesr_plt_lip_' + sdate + '.txt'
-    download_s3(s3bucket, s3key, LIPpath)
+    # s3key = 'fieldcampaign/goesrplt/LIP/data/goesr_plt_lip_' + sdate + '.txt'
+    # download_s3(s3bucket, s3key, LIPpath)
+
 
     ############################################
     # Pre-process LIP data, get rid of "NaN"
     ############################################
-    fileLIP = glob.glob(LIPpath + '/goesr_plt_lip_*' + sdate + '*')[0]
-    fileLIP2 = fileLIP.split(".")[0] + "_valid.txt"
+    # fileLIP = glob.glob(LIPpath + '/goesr_plt_lip_*' + sdate + '*')[0]
+    # fileLIP2 = fileLIP.split(".")[0] + "_valid.txt"
+
+    # open subset-data
+
+    fileName = "lip_subset" 
+    fileDir = "./subsets/raw/"
+    fileLIP = fileDir + fileName + ".txt"
+    fileLIP2 =  fileDir + fileName + "_valid.txt"
 
     with open(fileLIP, "r") as f:
         lines = f.readlines()
@@ -88,8 +96,9 @@ def makeCZML(fdate):
 
         czmlBody.append(packet)
 
-    folder = f"{os.getenv('LIP_OUTPUT_PATH')}/{fdate}"
-    mkfolder(folder)
+    # folder = f"{os.getenv('LIP_OUTPUT_PATH')}/{fdate}"
+    folder = "./subsets/processed"
+    # mkfolder(folder)
 
     LIPczml = json.dumps(czmlBody)
 
@@ -100,14 +109,17 @@ def makeCZML(fdate):
     CZMLfile.write(LIPczml)
     CZMLfile.close()
 
-    instr = "lip"
-    s3name = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{instr}/{filename}"
-    print(f"s3name={s3name}, filename={filepath}")
-    upload_to_s3(filepath, os.environ['OUTPUT_DATA_BUCKET'], s3_name=s3name)
+    # instr = "lip"
+    # s3name = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{instr}/{filename}"
+    # print(f"s3name={s3name}, filename={filepath}")
+    # upload_to_s3(filepath, os.environ['OUTPUT_DATA_BUCKET'], s3_name=s3name)
 
 
-dates = ['2017-04-11', '2017-04-13', '2017-04-16', '2017-04-18', '2017-04-20', '2017-04-22', '2017-05-07',
-         '2017-05-08', '2017-05-12', '2017-05-14', '2017-05-17']
+# dates = ['2017-04-11', '2017-04-13', '2017-04-16', '2017-04-18', '2017-04-20', '2017-04-22', '2017-05-07',
+#          '2017-05-08', '2017-05-12', '2017-05-14', '2017-05-17']
+
+# lets do it once.
+dates = ['2017-04-11']
 
 for fdate in dates:
     makeCZML(fdate)
