@@ -12,9 +12,10 @@ session = boto3.session.Session()
 
 def makeCZML(fdate):
 
-    s3bucket = os.getenv('RAW_DATA_BUCKET')  # s3bucket if input is in "cloud"
+    # s3bucket = os.getenv('RAW_DATA_BUCKET')  # s3bucket if input is in "cloud"
 
-    sdate = fdate.split('-')[0] + fdate.split('-')[1] + fdate.split('-')[2]
+    # sdate = fdate.split('-')[0] + fdate.split('-')[1] + fdate.split('-')[2]
+    sdate = "20170517"
     ltype = 'Flash'  # 'Pulse'  #'Flash'
 
     # ----FEGS flash data and along flight track
@@ -26,21 +27,25 @@ def makeCZML(fdate):
     diff = (t1 - t0517).total_seconds()
     GPSsec0 = GPSsec0517 + diff
 
-    if (ltype == 'Flash'):
-        typeID = 'FlashID'
+    # if (ltype == 'Flash'):
+    typeID = 'FlashID'
 
-    elif (ltype == 'Pulse'):
-        typeID = 'PulseID'
+    # elif (ltype == 'Pulse'):
+    #     typeID = 'PulseID'
 
-    file = 'fieldcampaign/goesrplt/FEGS/data/goesr_plt_FEGS_' + fdate.replace('-', '') + '_Flash_v2.txt'
+    # file = 'fieldcampaign/goesrplt/FEGS/data/goesr_plt_FEGS_' + fdate.replace('-', '') + '_Flash_v2.txt'
 
-    file_exists = s3_key_exists(session.client('s3'), s3bucket, file)
+    # file_exists = s3_key_exists(session.client('s3'), s3bucket, file)
 
-    if file_exists is False: return
+    # if file_exists is False: return
 
-    print(f" file_exists={file_exists} {file}")
+    # print(f" file_exists={file_exists} {file}")
 
-    fileFEGS = s3FileObj(s3bucket, file, verb=False)
+    # fileFEGS = s3FileObj(s3bucket, file, verb=False)
+
+    fileName = "fegs_subset" 
+    fileDir = "./subsets/raw/"
+    fileFEGS = fileDir + fileName + ".txt" 
 
     DF = pd.read_csv(fileFEGS, sep=",", index_col=None, usecols=
     [typeID, 'GPSstart', 'SUBstart', 'GPSend', 'SUBend',
@@ -89,9 +94,8 @@ def makeCZML(fdate):
 
         czmlBody.append(packet)
 
-    folder = f"{os.getenv('FEGS_OUTPUT_PATH')}/{fdate}"
-
-    mkfolder(folder)
+    folder = "./subsets/processed"
+    # mkfolder(folder)
 
     FEGSczml = json.dumps(czmlBody)
     filename = "FEGS_" + ltype + ".czml"
@@ -101,14 +105,17 @@ def makeCZML(fdate):
     CZMLfile.write(FEGSczml)
     CZMLfile.close()
 
-    instr = "fegs"
-    s3name = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{instr}/{filename}"
-    print(f"s3name={s3name}, filename={filepath}")
-    upload_to_s3(filepath, os.environ['OUTPUT_DATA_BUCKET'], s3_name=s3name)
+    # instr = "fegs"
+    # s3name = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{instr}/{filename}"
+    # print(f"s3name={s3name}, filename={filepath}")
+    # upload_to_s3(filepath, os.environ['OUTPUT_DATA_BUCKET'], s3_name=s3name)
 
 
-dates = ['2017-04-16','2017-04-18', '2017-04-20', '2017-04-22', '2017-05-07',
-         '2017-05-08', '2017-05-12', '2017-05-14', '2017-05-17']
+# dates = ['2017-04-16','2017-04-18', '2017-04-20', '2017-04-22', '2017-05-07',
+#          '2017-05-08', '2017-05-12', '2017-05-14', '2017-05-17']
+
+# lets do it once.
+dates = ['2017-04-16']
 
 for fdate in dates:
     print(fdate)
