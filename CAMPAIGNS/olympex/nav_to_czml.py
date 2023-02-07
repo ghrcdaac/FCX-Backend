@@ -68,5 +68,5 @@ def dc8():
     data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name)
     
 er2()
-# dc8()
+dc8()
 
