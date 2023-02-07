@@ -59,6 +59,7 @@ def er2():
     data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name)
 
 def dc8():
+    #TODO: Handle when none of the data row has any complete value. i.e. for all rows, there exists a null cell
     # bucket_name = os.getenv('RAW_DATA_BUCKET')
     bucket_name="ghrc-fcx-field-campaigns-szg"
     field_campaign = "Olympex"
