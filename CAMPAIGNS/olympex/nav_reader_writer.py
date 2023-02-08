@@ -102,7 +102,7 @@ class FlightTrackReader:
         self.converters[1] = self.string_to_date
         self.converters[2] = self.string_to_float
         self.converters[3] = self.string_to_float
-        self.converters[4] = self.string_to_float
+        self.converters[5] = self.string_to_float
         self.converters[14] = self.string_to_float
         self.converters[16] = self.string_to_float
         self.converters[17] = self.string_to_float
@@ -112,7 +112,7 @@ class FlightTrackReader:
         time = data[:, 1]
         latitude = data[:, 2]
         longitude = data[:, 3]
-        altitude = data[:, 4]
+        altitude = data[:, 5]
         heading = data[:, 14] * np.pi / 180. - np.pi / 2.
         pitch = data[:, 16] * np.pi / 180.
         roll = data[:, 17] * np.pi / 180.
