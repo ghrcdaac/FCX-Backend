@@ -27,14 +27,13 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/olympex"):
+            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/data/"):
         keys.append(obj.key)
 
     result = keys
 
     s3_client = boto3.client('s3')
     for infile in result:
-        print(infile)
         s3_file = s3_client.get_object(Bucket=bucket_name, Key=infile)
         data = s3_file['Body'].iter_lines()
         reader = FlightTrackReader(row_name_index_map)
@@ -49,6 +48,7 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         output_name = os.path.splitext(os.path.basename(infile))[0]
         outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_name}.czml"
         s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
+        print(infile+" conversion done.")
 
 def er2():
     # bucket_name = os.getenv('RAW_DATA_BUCKET')
