@@ -9,7 +9,7 @@ import os
 from nav_reader_writer import FlightTrackCzmlWriter 
 from nav_reader_writer import FlightTrackReader
 
-def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign = "Olympex", input_data_dir = "instrument-raw-data", output_data_dir = "instrument-processed-data", instrument_name = "nav_er2"):
+def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign = "Olympex", input_data_dir = "instrument-raw-data", output_data_dir = "instrument-processed-data", instrument_name = "nav_er2", row_name_index_map={}):
     """
     gets raw file path to s3 defined path.
     converts it to czml.
@@ -21,6 +21,7 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         input_data_dir (str, optional): folder name where raw data sits. Case sensitive. Defaults to "instrument-raw-data".
         output_data_dir (str, optional): folder name where converted data will be stored. Case sensitive. Defaults to "instrument-processed-data".
         instrument_name (str, optional): instrument from which data is collected. Defaults to "nav_er2".
+        row_name_index_map (hash): Hash formed by the column name as key and its position in the L1 data as value. Needed to know position of data column to take during read.
     """
     s3_resource = boto3.resource('s3')
     s3bucket = s3_resource.Bucket(bucket_name)    
@@ -36,7 +37,7 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         print(infile)
         s3_file = s3_client.get_object(Bucket=bucket_name, Key=infile)
         data = s3_file['Body'].iter_lines()
-        reader = FlightTrackReader()
+        reader = FlightTrackReader(row_name_index_map)
         reader.read_csv(data)
 
         writer = FlightTrackCzmlWriter(reader.length)
@@ -56,18 +57,36 @@ def er2():
     input_data_dir = "instrument-raw-data"
     output_data_dir = "instrument-processed-data"
     instrument_name = "nav_er2"
-    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name)
+    # modify "row_name_index_map" according to the data manual and the data availability
+    row_name_index_map = {
+        "time": 1,
+        "latitude": 2,
+        "longitude": 3,
+        "altitude": 4,
+        "heading": 14,
+        "pitch": 16,
+        "roll": 17
+    }
+    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, row_name_index_map)
 
 def dc8():
-    #TODO: Handle when none of the data row has any complete value. i.e. for all rows, there exists a null cell
     # bucket_name = os.getenv('RAW_DATA_BUCKET')
     bucket_name="ghrc-fcx-field-campaigns-szg"
     field_campaign = "Olympex"
     input_data_dir = "instrument-raw-data"
     output_data_dir = "instrument-processed-data"
     instrument_name = "nav_dc8"
-    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name)
+    # modify "row_name_index_map" according to the data manual and the data availability
+    row_name_index_map = {
+        "time": 1,
+        "latitude": 2,
+        "longitude": 3,
+        "altitude": 5,
+        "heading": 14,
+        "pitch": 16,
+        "roll": 17
+    }
+    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, row_name_index_map)
     
 er2()
 dc8()
-

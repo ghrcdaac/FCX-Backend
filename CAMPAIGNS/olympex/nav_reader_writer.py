@@ -94,28 +94,48 @@ class FlightTrackCzmlWriter:
 # class declaration
 
 class FlightTrackReader:
+    """
+    Reads the Level L1 instrument data
+    """
 
-    def __init__(self):
+    def __init__(self, rni):
+        """
+        Initiate the object. Needs (rni) row_name_index_map (a hash)
+
+        Args:
+            rni (dictonary): dictonary of row_name_index_map. It formed by the column name as key and its position in the L1 data as value.
+                             Needed to know position of data column to take during read.
+        """
         self.converters = {}
         for i in range(33):
+            # initially converters ignores all columns data. 33 cols for flight nav dataset 
             self.converters[i] = self.ignore
-        self.converters[1] = self.string_to_date
-        self.converters[2] = self.string_to_float
-        self.converters[3] = self.string_to_float
-        self.converters[5] = self.string_to_float
-        self.converters[14] = self.string_to_float
-        self.converters[16] = self.string_to_float
-        self.converters[17] = self.string_to_float
+        # not ignore them according to need
+        self.converters[rni["time"]] = self.string_to_date
+        self.converters[rni["latitude"]] = self.string_to_float
+        self.converters[rni["longitude"]] = self.string_to_float
+        self.converters[rni["altitude"]] = self.string_to_float
+        self.converters[rni["heading"]] = self.string_to_float
+        self.converters[rni["pitch"]] = self.string_to_float
+        self.converters[rni["roll"]] = self.string_to_float
+        self.row_name_index_map = rni # future ref.
 
     def read_csv(self, infile):
+        """
+        Read the level L1 data from text file.
+
+        Args:
+            infile (generator): data that is read from the file (s3)
+        """
+        rni = self.row_name_index_map
         data = np.loadtxt(infile, delimiter=',', converters=self.converters)
-        time = data[:, 1]
-        latitude = data[:, 2]
-        longitude = data[:, 3]
-        altitude = data[:, 5]
-        heading = data[:, 14] * np.pi / 180. - np.pi / 2.
-        pitch = data[:, 16] * np.pi / 180.
-        roll = data[:, 17] * np.pi / 180.
+        time = data[:, rni["time"]]
+        latitude = data[:, rni["latitude"]]
+        longitude = data[:, rni["longitude"]]
+        altitude = data[:, rni["altitude"]]
+        heading = data[:, rni["heading"]] * np.pi / 180. - np.pi / 2.
+        pitch = data[:, rni["pitch"]] * np.pi / 180.
+        roll = data[:, rni["roll"]] * np.pi / 180.
 
         mask = np.logical_not(np.isnan(latitude))
         mask = np.logical_and(mask, np.logical_not(np.isnan(longitude)))
@@ -143,6 +163,10 @@ class FlightTrackReader:
         self.pitch = pitch[mask][::5]
         self.roll = roll[mask][::5]
         self.length = mask[mask][::5].size
+
+    """
+    Below are functions needed for column converters during numpy loadtext
+    """
 
     def string_to_float(self, str):
         value = np.nan
