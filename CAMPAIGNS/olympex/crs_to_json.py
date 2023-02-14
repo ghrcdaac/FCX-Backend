@@ -4,10 +4,11 @@ import numpy as np
 import xarray as xr
 import shutil
 import boto3
+from pathlib import Path
 
-from utils.ingest_utils import add24hr,  CRSaccess
-from utils.point_cloud import generate_point_cloud
-from utils.s3_updnload import upload_to_s3
+from crs_utils.ingest_utils import add24hr,  CRSaccess
+from crs_utils.point_cloud import generate_point_cloud
+from crs_utils.s3_updnload import upload_to_s3
 
 
 # META needed for ingest
@@ -20,7 +21,7 @@ chunk = 262144
 to_rad = np.pi / 180
 to_deg = 180 / np.pi
 
-def ingest(folder, file):
+def ingest(folder, file, s3bucket):
     """
     Converts Level 1B crs data from s3 to zarr file and then stores it in the provided folder
     Args:
@@ -38,7 +39,7 @@ def ingest(folder, file):
     z_ref = z_vars.create_dataset('ref', shape=(0), chunks=(chunk), dtype=np.float32)
     n_time = np.array([], dtype=np.int64)
 
-    date = file.split("_")[3]
+    date = file.split("_")[2]
     base_time = np.datetime64('{}-{}-{}'.format(date[:4], date[4:6], date[6:]))
 
     print("Accessing file from S3 ", file)
@@ -49,7 +50,7 @@ def ingest(folder, file):
     # open dataset.
     with xr.open_dataset(fileObj, decode_cf=False) as ds:
         # added for time correction for over 24h UTC
-        hr = add24hr(ds['time'].values)
+        hr = add24hr(ds['timed'].values)
         delta = (hr * 3600).astype('timedelta64[s]') + base_time
         # time correction end
         
@@ -140,37 +141,49 @@ def down_vector(roll, pitch, head):
 
 # ------------------START--------------------------------
 
-s3bucket = os.getenv('RAW_DATA_BUCKET')
+def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name):
+    s3_resource = boto3.resource('s3')
+    s3bucket = s3_resource.Bucket(bucket_name)    
+    keys = []
+    for obj in s3bucket.objects.filter(
+            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/olympex"):
+        keys.append(obj.key)
 
-dates = ['2017-04-11','2017-04-13','2017-04-16','2017-04-18', '2017-04-20', '2017-04-22', '2017-05-07',
-         '2017-05-08', '2017-05-12', '2017-05-14', '2017-05-17']
+    result = keys
+    for s3_raw_file_key in result:
+        # SOURCE DIR.
+        sdate = s3_raw_file_key.split('_')[2]
+        print(f'processing CRS file {s3_raw_file_key}')
 
-for fdate in dates:
-    # SOURCE DIR.
-    os.environ['FLIGHT_DATE'] = fdate
-    sdate = fdate.replace('-', '')
-    s3_raw_file_key = f"fieldcampaign/goesrplt/CRS/data/GOESR_CRS_L1B_{sdate}_v0.nc" # SOURCE
-    print(f'processing CRS file {s3_raw_file_key}')
-    os.environ['CRS_OUTPUT_FLIGHT_PATH'] = f"{os.getenv('CRS_OUTPUT_PATH')}/{sdate}"
+        # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
+        folder = f"./tmp/crs_olympex/zarr/{sdate}"
+        point_cloud_folder = f"{folder}/point_cloud"
+        if os.path.exists(folder): shutil.rmtree(f"{folder}")
+        # os.mkdir(folder)
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        # LOAD FROM SOURCE WITH NECESSARY PRE PROCESSING. CONVERT LEVEL 1B RAW FILES INTO ZARR FILE.
+        ingest(folder, s3_raw_file_key, bucket_name)
+        # CONVERT ZARR FILE INTO 3D TILESET JSON.
+        generate_point_cloud("ref",  0,  1000000000000, folder, point_cloud_folder)
 
-    # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
-    folder = os.environ['CRS_OUTPUT_FLIGHT_PATH']
-    point_cloud_folder = f"{folder}/point_cloud"
-    if os.path.exists(folder): shutil.rmtree(f"{folder}")
-    os.mkdir(folder)
+        # UPLOAD CONVERTED FILES.
+        files = os.listdir(point_cloud_folder)
+        s3 = boto3.client('s3')
+        for file in files:
+            fname = os.path.join(point_cloud_folder, file) # SOURCE
+            s3name = f"{bucket_name}/{field_campaign}/{output_data_dir}/{sdate}/crs/{file}" # DESTINATION
+            print(f"uploaded to {s3name}.")
+            upload_to_s3(fname, bucket_name, s3_name=s3name)
 
-    # LOAD FROM SOURCE WITH NECESSARY PRE PROCESSING. CONVERT LEVEL 1B RAW FILES INTO ZARR FILE.
-    ingest(folder, s3_raw_file_key)
 
-    # CONVERT ZARR FILE INTO 3D TILESET JSON.
-    generate_point_cloud("ref",  0,  1000000000000, folder, point_cloud_folder)
+def crs():
+    # bucket_name = os.getenv('RAW_DATA_BUCKET')
+    bucket_name="ghrc-fcx-field-campaigns-szg"
+    field_campaign = "Olympex"
+    input_data_dir = "instrument-raw-data"
+    output_data_dir = "instrument-processed-data"
+    instrument_name = "crs"
+    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name)
 
-    # UPLOAD CONVERTED FILES.
-    files = os.listdir(point_cloud_folder)
-    s3 = boto3.client('s3')
-    instr = "crs"
-    for file in files:
-        fname = os.path.join(point_cloud_folder, file) # SOURCE
-        s3name = f"{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{instr}/{file}" # DESTINATION
-        print(f"s3name={s3name}, fname={fname}")
-        upload_to_s3(fname, os.environ['OUTPUT_DATA_BUCKET'], s3_name=s3name)
+
+crs()
