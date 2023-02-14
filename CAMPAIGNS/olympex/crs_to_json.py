@@ -171,7 +171,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         s3 = boto3.client('s3')
         for file in files:
             fname = os.path.join(point_cloud_folder, file) # SOURCE
-            s3name = f"{bucket_name}/{field_campaign}/{output_data_dir}/{sdate}/crs/{file}" # DESTINATION
+            s3name = f"{field_campaign}/{output_data_dir}/crs/{sdate}/{file}" # DESTINATION
             print(f"uploaded to {s3name}.")
             upload_to_s3(fname, bucket_name, s3_name=s3name)
 
