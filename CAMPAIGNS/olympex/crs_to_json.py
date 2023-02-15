@@ -156,7 +156,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         print(f'processing CRS file {s3_raw_file_key}')
 
         # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
-        folder = f"./tmp/crs_olympex/zarr/{sdate}"
+        folder = f"/tmp/crs_olympex/zarr/{sdate}"
         point_cloud_folder = f"{folder}/point_cloud"
         if os.path.exists(folder): shutil.rmtree(f"{folder}")
         # os.mkdir(folder)
