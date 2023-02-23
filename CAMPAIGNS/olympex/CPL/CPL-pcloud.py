@@ -22,6 +22,8 @@ def mk_CPLpcloud(s3FilePath, outputFolder):
     
     # Extract necessary data cols as pandas dataframe.
     CPL, _, _ = ER2CPL(s3FilePath)
+    
+    return
 
     ## data preprocessing start ##
     
@@ -71,7 +73,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     destinationPrefixPath=f"{field_campaign}/{output_data_dir}/{instrument_name}"
     
     results = fileList(bucket_name, sourcePrefixPath)
-    for s3_raw_file_key in results:
+    for s3_raw_file_key in [results[1]]:
         src_s3_path = f"s3://{bucket_name}/{s3_raw_file_key}"
 
         # Create DIR for Output.        

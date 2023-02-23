@@ -197,6 +197,16 @@ def ER2CPL(Hfile):
     CPL=CPL[CPL['alt']>  0]   # ignore near surface signals
     CPL = CPL.reset_index(drop=True)
     
+
+    CPL.to_csv("./cpldatasanz.csv")
+    # clear any undefined or nan data rows.
+    
+    # CPL = CPL[CPL['atb'].notnull()]
+    
+    # mask = np.logical_not(np.isnan(CPL['atb']))
+    
+    # CPL = CPL[mask]
+    
     return CPL, Sec1D, Alt1D #(for plotting Only)
 
 
