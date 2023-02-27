@@ -189,7 +189,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         keys.append(obj.key)
 
     result = keys
-    for s3_raw_file_key in [result[13]]:
+    for s3_raw_file_key in result:
         # SOURCE DIR.
         sdate = s3_raw_file_key.split("_")[5].split(".")[0]
         print(f'processing CRS file {s3_raw_file_key}')
@@ -213,7 +213,6 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
             s3name = f"{field_campaign}/{output_data_dir}/cpl/{sdate}/{file}" # DESTINATION
             print(f"uploaded to {s3name}.")
             upload_to_s3(fname, bucket_name, s3_name=s3name)
-        return
 
 
 def cpl():
