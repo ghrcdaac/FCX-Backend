@@ -133,7 +133,7 @@ def ingest(folder, file, s3bucket):
     lon = lon[sort_idx]
     lat = lat[sort_idx]
     alt = alt[sort_idx]
-    atb = atb[sort_idx]
+    atb = atb[sort_idx]*10000
     time = time[sort_idx]
 
     # remove nan and infinite using mask ???
