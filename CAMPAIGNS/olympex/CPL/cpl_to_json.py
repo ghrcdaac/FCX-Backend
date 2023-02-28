@@ -50,41 +50,23 @@ def ingest(folder, file, s3bucket):
     fs = s3fs.S3FileSystem(anon=False)
     with fs.open(file) as cplfile:
         with h5py.File(cplfile, 'r') as f1:
-            
-            # atb1064 = f1['ATB_1064'][()]
-            # AltBin = f1['Bin_Alt'][()] * 1000    #[km] ==> [m]
-            
-            atb = f1['ATB_1064'][()]
-            # rad_range = f1['Bin_Alt'][()] * 1000    #[km] ==> [m]
-            
+            atb = f1['ATB_1064'][()]            
             lon  = f1['Longitude'][()]
             lat  = f1['Latitude'][()]
             alt  = f1['Plane_Alt'][()] * 1000   #[km] ==> [m]
-            
             roll = f1['Plane_Roll'][()] * to_rad
             head = f1['Plane_Heading'][()] * to_rad
             pitch = f1['Plane_Pitch'][()] * to_rad
-            
-            # if over 24 hour fix yet not applied
+
+            # !!! if over 24 hour fix not applied
             delta = [(base_time + (h*3600+m*60+s).astype('timedelta64[s]')) for (h,m,s) in 
                     zip(f1['Hour'][()], f1['Minute'][()], f1['Second'][()])] #delta is in seconds
 
 
-    num_col = atb.shape[0] # number of cols, say 7903
+    # num_col = atb.shape[0] # number of cols, say 7903
     num_row = atb.shape[1] # number of rows, say 757
-    
-    # Alt1D = syncDim(Alt1D, Sec1D)
-    # roll1D = syncDim(roll1D, Sec1D)
-    # head1D = syncDim(head1D, Sec1D)
-    # pitch1D = syncDim(pitch1D, Sec1D)
 
-    # # nan values are stored as -999 on level 2 data. nan check not really necessary
-    # atb1064[np.isnan(atb1064)] = -999.
-    # atb1064[np.isinf(atb1064)] = -999.
-    # atb1064.shape
-
-    # dataFrame formation
-   
+    # maintain data shape
     delta = np.repeat(delta, num_row)
     lon = np.repeat(lon, num_row)
     lat = np.repeat(lat, num_row)
@@ -95,38 +77,11 @@ def ingest(folder, file, s3bucket):
     
     atb = atb.flatten()
     
-    ###########################################################################
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
     # time correction.
     time = (delta - np.datetime64('1970-01-01')).astype('timedelta64[s]').astype(np.int64)
 
     # !!! no lon alt lat correction for now.
-    # x, y, z = down_vector(roll, pitch, head)
-    # x = np.multiply(x, np.divide(rad_range, 111000 * np.cos(lat * to_rad)))
-    # y = np.multiply(y, np.divide(rad_range, 111000))
-    # z = np.multiply(z, rad_range)
-
-    # lon = np.add(-x, lon)
-    # lat = np.add(-y, lat)
-    # alt = np.add(z, alt)
-
+    
     # sort data by time
     sort_idx = np.argsort(time)
 
@@ -136,14 +91,13 @@ def ingest(folder, file, s3bucket):
     atb = atb[sort_idx]*10000
     time = time[sort_idx]
 
-    # remove nan and infinite using mask ???
-    # mask = np.logical_and(np.isfinite(atb), alt > 0)
-    # mask = np.logical_and(np.isfinite(atb), alt)
-    # lon = lon[mask]
-    # lat = lat[mask]
-    # alt = alt[mask]
-    # atb = atb[mask]
-    # time = time[mask]
+    # remove infinite atb value and negative altitude values using mask
+    mask = np.logical_and(np.isfinite(atb), alt > 0) # alt value when not avail is defaulted to -999.0
+    lon = lon[mask]
+    lat = lat[mask]
+    alt = alt[mask]
+    atb = atb[mask]
+    time = time[mask]
 
     # Now populate (append) the empty rows with modified data.
     z_location.append(np.stack([lon, lat, alt], axis=-1))
