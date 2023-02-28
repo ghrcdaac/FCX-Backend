@@ -55,7 +55,7 @@ def ingest(folder, file, s3bucket):
         # time correction end
         
         # data columns extract
-        ref = ds["zku"].values #CRS radar reflectivity
+        ref = ds[variables[0]].values #CRS radar reflectivity
         lat = ds['lat'].values
         lon = ds['lon'].values
         alt = ds['altitude'].values # altitude of aircraft in meters
