@@ -15,7 +15,7 @@ from crs_utils.s3_updnload import upload_to_s3
 campaign = 'Olympex'
 collection = "AirborneRadar"
 dataset = "gpmValidationOlympexcrs"
-variables = ["ref"]
+variables = ["zku"]
 renderers = ["point_cloud"]
 chunk = 262144
 to_rad = np.pi / 180
