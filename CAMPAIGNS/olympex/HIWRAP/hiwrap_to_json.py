@@ -41,7 +41,7 @@ def ingest(folder, file, s3bucket):
     z_ref = z_vars.create_dataset('ref', shape=(0), chunks=(chunk), dtype=np.float32)
     n_time = np.array([], dtype=np.int64)
 
-    date = file.split("_")[2]
+    date = file.split("_")[3]
     base_time = np.datetime64('{}-{}-{}'.format(date[:4], date[4:6], date[6:]))
 
     print("Accessing file from S3 ", file)
@@ -148,13 +148,13 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/olympex"):
+            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/RADEX"):
         keys.append(obj.key)
 
     result = keys
     for s3_raw_file_key in result:
         # SOURCE DIR.
-        sdate = s3_raw_file_key.split('_')[2]
+        sdate = s3_raw_file_key.split('_')[3]
         print(f'processing CRS file {s3_raw_file_key}')
 
         # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
