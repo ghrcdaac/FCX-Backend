@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 import json
-from .helper.sample_data import sample_czml
+from helper.sample_data import sample_czml
 
 czml_head = sample_czml[0]
 model = sample_czml[1]

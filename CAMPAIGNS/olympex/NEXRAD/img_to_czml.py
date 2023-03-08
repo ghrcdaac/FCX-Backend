@@ -1,6 +1,13 @@
 import boto3
 import os
 from itertools import groupby
+from nexrad_czml_writer import NexradCzmlWriter
+
+locations_coordinates = {
+    "katx": [-123.197, 48.735, -121.812, 49.653],
+    "klgx": [-124.783, 46.674, -123.45, 47.582],
+    "krtx": [-123.619, 45.260, -122.321, 46.172]
+}
 
 def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, instrument_location):
     # get the instrument data list
@@ -10,7 +17,6 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     for obj in s3bucket.objects.filter(
             Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/{instrument_location}/olympex"):
         filenames.append(obj.key)
-
     # remove tilt 5 degree (ELEV_02) data. Only visualizing parallel (ELEV_01) data
     filtered_file_names = [filename for filename in filenames if "ELEV_02" not in filename]
     groupedFilenames = group_by_unique_dates(filtered_file_names)
@@ -18,12 +24,19 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     # for each grouped data, i.e. for each date, create a czml and upload it.
     for fileGroup in groupedFilenames:
         # create czml for each group.
+        czml = NexradCzmlWriter(locations_coordinates[instrument_location])
         date_time_range = collectDateTimeRange(fileGroup)
-        for filename in fileGroup:
+        for index, filename in enumerate(fileGroup):
             # insert inside czml
-            pass
+            imagery_url = f"https://ghrc-fcx-field-campaigns-szg.s3.amazonaws.com/{filename}"
+            avail_start = date_time_range[index][0]
+            avail_end = date_time_range[index][1]
+            print(index, imagery_url, avail_start, avail_end)
+            czml.addTemporalImagery(index, imagery_url, avail_start, avail_end)
 
         # save the czml in s3.
+        print(czml.get_string())
+        return
 
         # # SOURCE DIR.
         # sdate = s3_raw_file_key.split('_')[3]
@@ -89,7 +102,7 @@ def nexrad_img_to_czml():
     input_data_dir = "instrument-raw-data"
     output_data_dir = "instrument-processed-data"
     instrument_name = "nexrad"
-    location="katx"
-    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, location)
+    location=["katx", "klgx", "krtx"]
+    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, location[0])
 
 nexrad_img_to_czml()
