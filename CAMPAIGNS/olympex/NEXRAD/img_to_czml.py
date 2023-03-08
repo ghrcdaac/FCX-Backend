@@ -3,6 +3,8 @@ import os
 from itertools import groupby
 from nexrad_czml_writer import NexradCzmlWriter
 
+s3_client = boto3.client('s3')
+
 locations_coordinates = {
     "katx": [-123.197, 48.735, -121.812, 49.653],
     "klgx": [-124.783, 46.674, -123.45, 47.582],
@@ -23,34 +25,28 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
 
     # for each grouped data, i.e. for each date, create a czml and upload it.
     for fileGroup in groupedFilenames:
+        group_date = fileGroup[0].split("_")[3]
+        print(f'Started processing NEXRAD for {group_date}')
+
         # create czml for each group.
-        czml = NexradCzmlWriter(locations_coordinates[instrument_location])
+        czml_writer = NexradCzmlWriter(locations_coordinates[instrument_location])
         date_time_range = collectDateTimeRange(fileGroup)
         for index, filename in enumerate(fileGroup):
             # insert inside czml
-            imagery_url = f"https://ghrc-fcx-field-campaigns-szg.s3.amazonaws.com/{filename}"
+            imagery_url = f"https://{bucket_name}.s3.amazonaws.com/{filename}"
             avail_start = date_time_range[index][0]
             avail_end = date_time_range[index][1]
-            print(index, imagery_url, avail_start, avail_end)
-            czml.addTemporalImagery(index, imagery_url, avail_start, avail_end)
+            czml_writer.addTemporalImagery(index, imagery_url, avail_start, avail_end)
 
         # save the czml in s3.
-        print(czml.get_string())
-        return
-
-        # # SOURCE DIR.
-        # sdate = s3_raw_file_key.split('_')[3]
-        # print(f'processing CRS file {s3_raw_file_key}')
-
-        # # create a czml file.
-
-        # # UPLOAD CONVERTED FILES.
-        # output_czml = writer.get_string()
-        # output_name = os.path.splitext(os.path.basename(s3_raw_file_key))[0]
-        # output_name_wo_time = output_name.split("-")[0]
-        # outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_name_wo_time}.czml"
-        # s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
-        # print(s3_raw_file_key+" conversion done.")
+        print('Uploading file')
+        # UPLOAD CONVERTED FILES.
+        output_czml = czml_writer.get_string()
+        output_name = f"olympex_Level2_KRTX_{group_date}"
+        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{instrument_location}/{output_name}.czml"
+        s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
+        print(f"NEXRAD czml conversion for {group_date} done.")
+    print(f"***All NEXRAD conversion for {instrument_location} Complete!***")
 
 def group_by_unique_dates(filenames):
     # sort the filenames.
