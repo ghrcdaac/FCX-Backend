@@ -1,60 +1,7 @@
 import numpy as np
 from copy import deepcopy
 import json
-
-# A sample czml that will display the nexrad time dynamic imagery data in cesium
-sample_czml = [
-    {
-      "id": "document",
-      "name": "CZML Geometries Rectangle",
-      "version": "1.0",
-      "clock": {
-        "interval": "2015-09-22T22:28:00Z/2015-09-22T23:58:00Z",
-        "currentTime": "2015-09-22T22:28:00Z",
-        "multiplier": 20,
-      },
-    },
-    {
-      "id": "textureRectangle1",
-      "name": "rectangle with image, above surface",
-      "availability": "2015-09-22T22:29:00Z/2015-09-22T22:38:00Z",
-      "rectangle": {
-        "coordinates": {
-          "wsenDegrees": [-123.197, 48.735, -121.812, 49.653],
-        },
-        "height": 0,
-        "fill": True,
-        "material": {
-          "image": {
-            "image": { "uri": "https://ghrc-fcx-field-campaigns-szg.s3.amazonaws.com/Olympex/instrument-raw-data/nexrad/katx/2015-09-22/olympex_Level2_KATX_20150922_2229_ELEV_01.png" },
-            "color": {
-              "rgba": [255, 255, 255, 128],
-            },
-          },
-        },
-      },
-    },
-    {
-      "id": "textureRectangle2",
-      "name": "rectangle with image, above surface",
-      "availability": "2015-09-22T22:38:00Z/2015-09-22T22:48:00Z",
-      "rectangle": {
-        "coordinates": {
-          "wsenDegrees": [-123.197, 48.735, -121.812, 49.653],
-        },
-        "height": 0,
-        "fill": True,
-        "material": {
-          "image": {
-            "image": { "uri": "https://ghrc-fcx-field-campaigns-szg.s3.amazonaws.com/Olympex/instrument-raw-data/nexrad/katx/2015-09-22/olympex_Level2_KATX_20150922_2238_ELEV_01.png", },
-            "color": {
-              "rgba": [255, 255, 255, 128],
-            },
-          },
-        },
-      },
-    },
-  ]
+from .helper.sample_data import sample_czml
 
 czml_head = sample_czml[0]
 model = sample_czml[1]
@@ -75,16 +22,27 @@ varying things:
 
 # class declaration
 
-class FlightTrackCzmlWriter:
+class NexradCzmlWriter:
 
-    def __init__(self, length):
+    def __init__(self, location, image_height=0, background_rgba_color=[255, 255, 255, 128]):
         self.model = deepcopy(model)
 
-    def set_time(self, time_window, time_steps):
-        pass
+        #some generic properties
+        self.model["rectangle"]["coordinates"]["wsenDegrees"] = location
+        self.model["rectangle"]["height"] = image_height
+        self.model["rectangle"]["material"]["image"]["color"]["rgba"] = background_rgba_color
+
+        self.czml_data = [czml_head]
+        self.location = location
+        self.image_height = image_height
+        self.background_rgba_color = background_rgba_color
     
-    def set_position(self, longitude, latitude, altitude):
-        pass
+    def addTemporalImagery(self, id, imagery_url, start_date_time, end_date_time):
+      new_node = deepcopy(self.model)
+      new_node['id'] = id
+      new_node['availability'] = f"{start_date_time}/{end_date_time}"
+      new_node["rectangle"]["material"]["image"]["image"] = imagery_url
+      self.czml_data.append(new_node)
 
     def get_string(self):
-        return json.dumps([czml_head, self.model])
+        return json.dumps(self.czml_data)
