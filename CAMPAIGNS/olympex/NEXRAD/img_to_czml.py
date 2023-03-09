@@ -29,7 +29,9 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         print(f'Started processing NEXRAD for {group_date}')
 
         # create czml for each group.
-        czml_writer = NexradCzmlWriter(locations_coordinates[instrument_location])
+            # The browse images available for download show radar reflectivity within a 1 km and 360 degree area around the radar station.
+        height = 1000. #meters
+        czml_writer = NexradCzmlWriter(locations_coordinates[instrument_location], height)
         date_time_range = collectDateTimeRange(fileGroup)
         for index, filename in enumerate(fileGroup):
             # insert inside czml
