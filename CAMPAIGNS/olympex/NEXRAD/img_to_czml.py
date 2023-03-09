@@ -79,7 +79,7 @@ def collectDateTimeRange(fileGroup):
     for index, filename in enumerate(fileGroup):
         starttime = filename.split("_")[4]
         if (index == end_index):
-            endtime = str(int(starttime) + 10) # every nexrad image has temporal resolution of 10 minutes
+            endtime = str((int(starttime) + 10) if (int(starttime) + 10) < 2359  else 2359 ) # every nexrad image has temporal resolution of 10 minutes
         else:
             endtime = fileGroup[index + 1].split("_")[4]
         formatted_start_time = '{}:{}'.format(starttime[:2], starttime[2:])
