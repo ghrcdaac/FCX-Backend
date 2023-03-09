@@ -42,7 +42,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         print('Uploading file')
         # UPLOAD CONVERTED FILES.
         output_czml = czml_writer.get_string()
-        output_name = f"olympex_Level2_KRTX_{group_date}"
+        output_name = f"olympex_Level2_{group_date}"
         outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{instrument_location}/{output_name}.czml"
         s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
         print(f"NEXRAD czml conversion for {group_date} done.")
