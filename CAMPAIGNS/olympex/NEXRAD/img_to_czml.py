@@ -58,8 +58,9 @@ def nexrad_img_to_czml():
     input_data_dir = "instrument-raw-data"
     output_data_dir = "instrument-processed-data"
     instrument_name = "nexrad"
-    location=["katx", "klgx", "krtx"]
+    locations=["katx", "klgx", "krtx"]
     # iterate the data preprocessing over the data collected accross various locations.
-    data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, location[0])
+    for location in locations:
+        data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, location)
 
 nexrad_img_to_czml()
