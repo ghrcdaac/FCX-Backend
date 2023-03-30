@@ -10,6 +10,7 @@ import h5py
 import pandas as pd
 from boto3 import client as boto_client
 import tarfile
+import glob
 
 from npol_utils.point_cloud import generate_point_cloud
 from npol_utils.s3_updnload import upload_to_s3
@@ -190,8 +191,9 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     for s3_key in keys:
         filename = s3_key.split('/')[3]
         raw_file_path = downloadFromS3(bucket_name, s3_key, raw_file_dir) # inc file name
+        # the raw file is for a single day. When unzipped, it will contain several data collected every 20 mins
         unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)
-        print(unzipped_file_path)
+        minutely_datas = glob.glob(f"{unzipped_file_path}/*/rhi_a/*.uf.gz")
 
     # for s3_raw_file_key in keys:
         # download each input file.
