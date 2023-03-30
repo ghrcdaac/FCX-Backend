@@ -9,6 +9,7 @@ import s3fs
 import h5py
 import pandas as pd
 from boto3 import client as boto_client
+import tarfile
 
 from npol_utils.point_cloud import generate_point_cloud
 from npol_utils.s3_updnload import upload_to_s3
@@ -149,6 +150,31 @@ def ingest(folder, file, s3bucket):
         "epoch": int(epoch)
     })
 
+def downloadFromS3(bucket_name, s3_key, dest_dir):
+    s3 = boto_client('s3')
+    filename = s3_key.split('/')[3]
+    dest_dir = '/tmp/npol_olympex/raw/'
+    dest = dest_dir + filename
+    if os.path.exists(dest_dir): shutil.rmtree(f"{dest_dir}")
+    Path(dest_dir).mkdir(parents=True, exist_ok=True)
+    print("Downloading file",s3_key,"from bucket",bucket_name, " into dir:", dest_dir)
+    s3.download_file(
+        Bucket = bucket_name,
+        Key = s3_key,
+        Filename = dest
+    )
+    return dest
+
+
+def untarr(raw_file_dir, raw_file_path, filename):
+    unzipped_file_path = raw_file_dir + filename.split(".")[0] # removing the .tar.gz # this is important
+    if raw_file_path.endswith("tar.gz"):
+        with tarfile.open(raw_file_path, "r:gz") as t:
+            t.extractall(unzipped_file_path)
+    elif raw_file_path.endswith("tar"):
+        with tarfile.open(raw_file_path, "r:") as t:
+            t.extractall(unzipped_file_path)
+    return unzipped_file_path
 # ------------------START--------------------------------
 
 def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name):
@@ -159,8 +185,14 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
             Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/olympex_npol"):
         keys.append(obj.key)
 
+    raw_file_dir = '/tmp/npol_olympex/raw/' # local dir where raw file resides.
+
     for s3_key in keys:
-        raw_file_path = dowloadFromS3(bucket_name, s3_key)
+        filename = s3_key.split('/')[3]
+        raw_file_path = downloadFromS3(bucket_name, s3_key, raw_file_dir) # inc file name
+        unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)
+        print(unzipped_file_path)
+
     # for s3_raw_file_key in keys:
         # download each input file.
         # unzip it
@@ -208,18 +240,3 @@ def npol():
 
 
 npol()
-
-def dowloadFromS3(bucket_name, s3_key):
-    s3 = boto_client('s3')
-    filename = s3_key.split('/')[3]
-    dest_dir = '/tmp/npol_olympex/raw/'
-    dest = dest_dir + filename
-    if os.path.exists(dest_dir): shutil.rmtree(f"{dest_dir}")
-    Path(dest_dir).mkdir(parents=True, exist_ok=True)
-    print("Downloading file",s3_key,"from bucket",bucket_name, " into dir:", dest_dir)
-    s3.download_file(
-        Bucket = bucket_name,
-        Key = s3_key,
-        Filename = dest
-    )
-    return dest
