@@ -7,8 +7,8 @@ from gzip import open as gzip_open
 class Reader():
     """Reader that reads all data from a set of UF Radar Files.
     """
-    def init(self):
-        pass
+    def init(self, file_path):
+        self.uf_file = file_path
 
     def _read_radar(self):
         """Read the radar file and return some important values.
@@ -16,7 +16,7 @@ class Reader():
         :return: The radar data including some important values.
         :rtype: Tuple
         """
-        uf_filename = "/tmp/test_data/olympex_NPOL1_20151203_000005_rhi_00-20.uf.gz"
+        uf_filename = self.uf_file
         if uf_filename.endswith('.gz'):
             with gzip_open(uf_filename, 'rb') as unzipped_file:
                 radar = uf.read_uf(

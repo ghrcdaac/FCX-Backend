@@ -8,6 +8,7 @@ from pathlib import Path
 import s3fs
 import h5py
 import pandas as pd
+from boto3 import client as boto_client
 
 from npol_utils.point_cloud import generate_point_cloud
 from npol_utils.s3_updnload import upload_to_s3
@@ -59,7 +60,8 @@ def ingest(folder, file, s3bucket):
     #         delta = [(base_time + (h*3600+m*60+s).astype('timedelta64[s]')) for (h,m,s) in 
     #                 zip(f1['Hour'][()], f1['Minute'][()], f1['Second'][()])] #delta is in seconds
 
-    ufr = UFReader()
+    # !!! input uf file path is inside UFREADER
+    ufr = UFReader("/tmp/test_data/olympex_NPOL1_20151203_000005_rhi_20-40.uf.gz")
     uf_datas = ufr.read_data() # it will return a generator.
 
     # using the generator, populate all the lon, lat, alt and atb values
@@ -154,20 +156,28 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}"):
+            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/olympex_npol"):
         keys.append(obj.key)
 
-    result = keys
-    # for s3_raw_file_key in result:
+    for s3_key in keys:
+        raw_file_path = dowloadFromS3(bucket_name, s3_key)
+    # for s3_raw_file_key in keys:
+        # download each input file.
+        # unzip it
+        # go inside rhi_a dir,
+        # list all the files.
+        # for each file, run ingest.
+        # generate point clouds.
+        # upload all of the pointcloud files.
 
     # # SOURCE DIR.
     # sdate = s3_raw_file_key.split("_")[5].split(".")[0]
     # print(f'processing CRS file {s3_raw_file_key}')
-    
-    sdate = "20151203"
+    return
+    sdate = "20151203b"
     # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
-    folder = f"/tmp/npol_olympex/zarr/{sdate}"
-    point_cloud_folder = f"{folder}/point_cloud"
+    folder = f"/tmp/npol_olympex/zarr/{sdate}" # intermediate folder for zarr file (date + time)
+    point_cloud_folder = f"{folder}/point_cloud" # intermediate folder for 3d tiles, point cloud
     if os.path.exists(folder): shutil.rmtree(f"{folder}")
     # os.mkdir(folder)
     Path(folder).mkdir(parents=True, exist_ok=True)
@@ -198,3 +208,18 @@ def npol():
 
 
 npol()
+
+def dowloadFromS3(bucket_name, s3_key):
+    s3 = boto_client('s3')
+    filename = s3_key.split('/')[3]
+    dest_dir = '/tmp/npol_olympex/raw/'
+    dest = dest_dir + filename
+    if os.path.exists(dest_dir): shutil.rmtree(f"{dest_dir}")
+    Path(dest_dir).mkdir(parents=True, exist_ok=True)
+    print("Downloading file",s3_key,"from bucket",bucket_name, " into dir:", dest_dir)
+    s3.download_file(
+        Bucket = bucket_name,
+        Key = s3_key,
+        Filename = dest
+    )
+    return dest
