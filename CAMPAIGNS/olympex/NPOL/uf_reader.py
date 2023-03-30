@@ -7,7 +7,7 @@ from gzip import open as gzip_open
 class Reader():
     """Reader that reads all data from a set of UF Radar Files.
     """
-    def init(self, file_path):
+    def __init__(self, file_path):
         self.uf_file = file_path
 
     def _read_radar(self):

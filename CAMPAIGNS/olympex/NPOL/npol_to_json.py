@@ -27,7 +27,7 @@ chunk = 262144
 to_rad = np.pi / 180
 to_deg = 180 / np.pi
 
-def ingest(folder, file, s3bucket):
+def ingest(folder, filePath):
     """
     Converts Level 1B crs data from s3 to zarr file and then stores it in the provided folder
     Args:
@@ -63,7 +63,7 @@ def ingest(folder, file, s3bucket):
     #                 zip(f1['Hour'][()], f1['Minute'][()], f1['Second'][()])] #delta is in seconds
 
     # !!! input uf file path is inside UFREADER
-    ufr = UFReader("/tmp/test_data/olympex_NPOL1_20151203_000005_rhi_20-40.uf.gz")
+    ufr = UFReader(filePath)
     uf_datas = ufr.read_data() # it will return a generator.
 
     # using the generator, populate all the lon, lat, alt and atb values
@@ -179,6 +179,15 @@ def untarr(raw_file_dir, raw_file_path, filename):
 # ------------------START--------------------------------
 
 def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name):
+    # for s3_raw_file_key in keys:
+    # download each input file.
+    # unzip it
+    # go inside rhi_a dir,
+    # list all the files.
+    # for each file, run ingest.
+    # generate point clouds.
+    # upload all of the pointcloud files.
+
     s3_resource = boto3.resource('s3')
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
@@ -192,44 +201,33 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         filename = s3_key.split('/')[3]
         raw_file_path = downloadFromS3(bucket_name, s3_key, raw_file_dir) # inc file name
         # the raw file is for a single day. When unzipped, it will contain several data collected every 20 mins
-        unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)
+        unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)        
+        # unzipped_file_path = '/tmp/npol_olympex/raw/olympex_npol_2015-1203'
         minutely_datas = glob.glob(f"{unzipped_file_path}/*/rhi_a/*.uf.gz")
-
-    # for s3_raw_file_key in keys:
-        # download each input file.
-        # unzip it
-        # go inside rhi_a dir,
-        # list all the files.
-        # for each file, run ingest.
-        # generate point clouds.
-        # upload all of the pointcloud files.
-
-    # # SOURCE DIR.
-    # sdate = s3_raw_file_key.split("_")[5].split(".")[0]
-    # print(f'processing CRS file {s3_raw_file_key}')
-    return
-    sdate = "20151203b"
-    # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
-    folder = f"/tmp/npol_olympex/zarr/{sdate}" # intermediate folder for zarr file (date + time)
-    point_cloud_folder = f"{folder}/point_cloud" # intermediate folder for 3d tiles, point cloud
-    if os.path.exists(folder): shutil.rmtree(f"{folder}")
-    # os.mkdir(folder)
-    Path(folder).mkdir(parents=True, exist_ok=True)
-    # LOAD FROM SOURCE WITH NECESSARY PRE PROCESSING. CONVERT LEVEL 1B RAW FILES INTO ZARR FILE.
-    # src_s3_path = f"s3://{bucket_name}/{s3_raw_file_key}"
-    src_s3_path = "abc"
-    ingest(folder, src_s3_path, bucket_name)
-    # # CONVERT ZARR FILE INTO 3D TILESET JSON.
-    generate_point_cloud("atb",  0,  1000000000000, folder, point_cloud_folder)
-    # # UPLOAD CONVERTED FILES.
-    files = os.listdir(point_cloud_folder)
-    s3 = boto3.client('s3')
-    for file in files:
-        fname = os.path.join(point_cloud_folder, file) # SOURCE
-        s3name = f"{field_campaign}/{output_data_dir}/npol/{sdate}/{file}" # DESTINATION
-        print(f"uploaded to {s3name}.")
-        upload_to_s3(fname, bucket_name, s3_name=s3name)
-
+        for index, minute_data_path in enumerate(minutely_datas):
+            print(f"\n{index}. converting for {minute_data_path}")
+            # convert and save.
+            # # SOURCE DIR.
+            sdate = minute_data_path.split("/")[-1].split("_")[2]
+            # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
+            folder = f"/tmp/npol_olympex/zarr/{sdate}/freq-{index}" # intermediate folder for zarr file (date + time), time rep by index.
+            point_cloud_folder = f"{folder}/point_cloud" # intermediate folder for 3d tiles, point cloud
+            if os.path.exists(folder): shutil.rmtree(f"{folder}")
+            # os.mkdir(folder)
+            Path(folder).mkdir(parents=True, exist_ok=True)
+            # LOAD FROM SOURCE WITH NECESSARY PRE PROCESSING. CONVERT LEVEL 1B RAW FILES INTO ZARR FILE.
+            # src_s3_path = f"s3://{bucket_name}/{s3_raw_file_key}"
+            src_s3_path = "abc"
+            ingest(folder, minute_data_path)
+            # # CONVERT ZARR FILE INTO 3D TILESET JSON.
+            generate_point_cloud("atb",  0,  1000000000000, folder, point_cloud_folder)
+            # # UPLOAD CONVERTED FILES.
+            files = os.listdir(point_cloud_folder)
+            for file in files:
+                fname = os.path.join(point_cloud_folder, file) # SOURCE
+                s3name = f"{field_campaign}/{output_data_dir}/npol/{sdate}/freq-{index}/{file}" # DESTINATION
+                print(f"uploaded to {s3name}.")
+                upload_to_s3(fname, bucket_name, s3_name=s3name)
 
 def npol():
     # bucket_name = os.getenv('RAW_DATA_BUCKET')
