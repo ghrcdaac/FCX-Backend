@@ -75,16 +75,16 @@ def ingest(folder, filePath):
 
     # using the generator, populate all the lon, lat, alt and atb values
     for uf_data in uf_datas:
-        atb.append(uf_data['CZ'])
-        lon.append(uf_data['lon'])
-        lat.append(uf_data['lat'])
-        alt.append(uf_data['height'])
+        atb.append(np.float64(uf_data['CZ']))
+        lon.append(np.float64(uf_data['lon']))
+        lat.append(np.float64(uf_data['lat']))
+        alt.append(np.float64(uf_data['height']))
         time.append(np.datetime64(uf_data['timestamp']).astype('timedelta64[s]').astype(np.int64))
 
-    atb = np.array(atb, dtype=np.int64)
-    lon = np.array(lon, dtype=np.int64)
-    lat = np.array(lat, dtype=np.int64)
-    alt = np.array(alt, dtype=np.int64)
+    atb = np.array(atb, dtype=np.float64)
+    lon = np.array(lon, dtype=np.float64)
+    lat = np.array(lat, dtype=np.float64)
+    alt = np.array(alt, dtype=np.float64)
     time = np.array(time, dtype=np.int64)
     
     # using the values, create a zarr file and return it.
