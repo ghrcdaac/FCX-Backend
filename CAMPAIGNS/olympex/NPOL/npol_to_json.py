@@ -66,20 +66,26 @@ def ingest(folder, filePath):
     ufr = UFReader(filePath)
     uf_datas = ufr.read_data() # it will return a generator.
 
+    # use plain python array to append, for performance reasons.
+    atb = []
+    lon = []
+    lat = []
+    alt = []
+    time = []
+
     # using the generator, populate all the lon, lat, alt and atb values
-
-    atb = np.array([], dtype=np.int64)            
-    lon = np.array([], dtype=np.int64)
-    lat = np.array([], dtype=np.int64)
-    alt = np.array([], dtype=np.int64)
-    time = np.array([], dtype=np.int64)
-
     for uf_data in uf_datas:
-        atb = np.append(atb, uf_data['CZ'])
-        lon = np.append(lon, uf_data['lon'])
-        lat = np.append(lat, uf_data['lat'])
-        alt = np.append(alt, uf_data['height'])
-        time = np.append(time, np.datetime64(uf_data['timestamp']).astype('timedelta64[s]').astype(np.int64))
+        atb.append(uf_data['CZ'])
+        lon.append(uf_data['lon'])
+        lat.append(uf_data['lat'])
+        alt.append(uf_data['height'])
+        time.append(np.datetime64(uf_data['timestamp']).astype('timedelta64[s]').astype(np.int64))
+
+    atb = np.array(atb, dtype=np.int64)
+    lon = np.array(lon, dtype=np.int64)
+    lat = np.array(lat, dtype=np.int64)
+    alt = np.array(alt, dtype=np.int64)
+    time = np.array(time, dtype=np.int64)
     
     # using the values, create a zarr file and return it.
 
@@ -201,7 +207,7 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         filename = s3_key.split('/')[3]
         raw_file_path = downloadFromS3(bucket_name, s3_key, raw_file_dir) # inc file name
         # the raw file is for a single day. When unzipped, it will contain several data collected every 20 mins
-        unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)        
+        unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)
         # unzipped_file_path = '/tmp/npol_olympex/raw/olympex_npol_2015-1203'
         minutely_datas = glob.glob(f"{unzipped_file_path}/*/rhi_a/*.uf.gz")
         for index, minute_data_path in enumerate(minutely_datas):
