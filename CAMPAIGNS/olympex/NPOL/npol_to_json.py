@@ -161,7 +161,9 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         unzipped_file_path = untarr(raw_file_dir, raw_file_path, filename)
         # unzipped_file_path = '/tmp/npol_olympex/raw/olympex_npol_2015-1203'
         minutely_datas = glob.glob(f"{unzipped_file_path}/*/rhi_a/*.uf.gz")
-        for index, minute_data_path in enumerate(minutely_datas):
+        # remove  ocean scans with the raw data containing Rhia nn_nn as 20-40 data. Only visualizing nn_nn 00_20 data.
+        filtered_files = [filepath for filepath in minutely_datas if "rhi_20-40" not in filename]
+        for index, minute_data_path in enumerate(filtered_files):
             print(f"\n{index}. converting for {minute_data_path}")
             # convert and save.
             # # SOURCE DIR.
