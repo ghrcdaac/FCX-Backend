@@ -1,13 +1,9 @@
 import os
 import zarr
 import numpy as np
-import xarray as xr
 import shutil
 import boto3
 from pathlib import Path
-import s3fs
-import h5py
-import pandas as pd
 from boto3 import client as boto_client
 import tarfile
 import glob
@@ -16,6 +12,10 @@ from npol_utils.point_cloud import generate_point_cloud
 from npol_utils.s3_updnload import upload_to_s3
 from uf_reader import Reader as UFReader
 
+from npol_czml_writer import NpolCzmlWriter
+from helper.conversion_helper import collectAvailabilityDateTimeRange
+
+s3_client = boto3.client('s3')
 
 # META needed for ingest
 campaign = 'Olympex'
@@ -155,6 +155,9 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
     raw_file_dir = '/tmp/npol_olympex/raw/' # local dir where raw file resides.
 
     for s3_key in keys:
+        # create a czml with all the 3dtiles information for a single day
+        czml_writer = NpolCzmlWriter()
+
         filename = s3_key.split('/')[3]
         raw_file_path = downloadFromS3(bucket_name, s3_key, raw_file_dir) # inc file name
         # the raw file is for a single day. When unzipped, it will contain several data collected every 20 mins
@@ -162,31 +165,45 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
         # unzipped_file_path = '/tmp/npol_olympex/raw/olympex_npol_2015-1203'
         minutely_datas = glob.glob(f"{unzipped_file_path}/*/rhi_a/*.uf.gz")
         # remove  ocean scans with the raw data containing Rhia nn_nn as 20-40 data. Only visualizing nn_nn 00_20 data.
-        filtered_files = [filepath for filepath in minutely_datas if "rhi_20-40" not in filename]
+        filtered_files = [filepath for filepath in minutely_datas if "rhi_20-40" not in filepath]
+        # sort according to date time.
+        filtered_files.sort()
+        # for the list of uf files within a single day, find the availability date time for each of them.
+        availability_time_range = collectAvailabilityDateTimeRange(filtered_files)
         for index, minute_data_path in enumerate(filtered_files):
+        # iterate to create 3d tiles.
             print(f"\n{index}. converting for {minute_data_path}")
             # convert and save.
             # # SOURCE DIR.
             sdate = minute_data_path.split("/")[-1].split("_")[2]
             # CREATE A LOCAL DIR TO HOLD RAW DATA AND CONVERTED DATA
-            folder = f"/tmp/npol_olympex/zarr/{sdate}/freq-{index}" # intermediate folder for zarr file (date + time), time rep by index.
+            tileFolder = minute_data_path.split("/")[-1].split(".")[0]
+            folder = f"/tmp/npol_olympex/zarr/{sdate}/{tileFolder}" # intermediate folder for zarr file (date + time), time rep by index.
             point_cloud_folder = f"{folder}/point_cloud" # intermediate folder for 3d tiles, point cloud
             if os.path.exists(folder): shutil.rmtree(f"{folder}")
             # os.mkdir(folder)
             Path(folder).mkdir(parents=True, exist_ok=True)
             # LOAD FROM SOURCE WITH NECESSARY PRE PROCESSING. CONVERT LEVEL 1B RAW FILES INTO ZARR FILE.
-            # src_s3_path = f"s3://{bucket_name}/{s3_raw_file_key}"
-            src_s3_path = "abc"
             ingest(folder, minute_data_path)
             # # CONVERT ZARR FILE INTO 3D TILESET JSON.
             generate_point_cloud("atb",  0,  1000000000000, folder, point_cloud_folder)
-            # # UPLOAD CONVERTED FILES.
+            # # UPLOAD CONVERTED 3d Tiles (Pointcloud) FILES.
             files = os.listdir(point_cloud_folder)
             for file in files:
                 fname = os.path.join(point_cloud_folder, file) # SOURCE
-                s3name = f"{field_campaign}/{output_data_dir}/npol/{sdate}/freq-{index}/{file}" # DESTINATION
+                s3name = f"{field_campaign}/{output_data_dir}/npol/{sdate}/{tileFolder}/{file}" # DESTINATION
                 print(f"uploaded to {s3name}.")
                 upload_to_s3(fname, bucket_name, s3_name=s3name)
+            # after uploading the 3d tile point cloud, track them in the czml.
+            tileLocation = f"https://{bucket_name}.s3.amazonaws.com/{field_campaign}/{output_data_dir}/{instrument_name}/{sdate}/{tileFolder}/tileset.json"
+            avail_start = availability_time_range[index][0]
+            avail_end = availability_time_range[index][1]
+            czml_writer.add3dTiles(index, tileLocation, avail_start, avail_end)
+            # upload the czml.
+            output_czml = czml_writer.get_string()
+            outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{sdate}/knit.czml"
+            s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
+            print(f"NPOL conversion for {sdate} done.")
 
 def npol():
     # bucket_name = os.getenv('RAW_DATA_BUCKET')

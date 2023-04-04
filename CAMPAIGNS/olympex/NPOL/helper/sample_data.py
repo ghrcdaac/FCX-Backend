@@ -13,7 +13,7 @@ sample_czml = [
     },
     {
       "id": "BatchedColors1",
-      "name": "BatchedColors",
+      "name": "npol_RADAR",
       "availability": "2015-12-03T00:05:00Z/2015-12-03T00:20:08Z",
       "tileset": {
         "uri": 
