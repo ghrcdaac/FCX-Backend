@@ -199,11 +199,12 @@ def data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_di
             avail_start = availability_time_range[index][0]
             avail_end = availability_time_range[index][1]
             czml_writer.add3dTiles(index, tileLocation, avail_start, avail_end)
-            # upload the czml.
-            output_czml = czml_writer.get_string()
-            outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{sdate}/knit.czml"
-            s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
-            print(f"NPOL conversion for {sdate} done.")
+            print(f"NPOL 3d tile conversion for {sdate} done.")
+        # upload the czml.
+        output_czml = czml_writer.get_string()
+        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{sdate}/knit.czml"
+        s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
+        print(f"NPOL CZML conversion for {sdate} done.")
 
 def npol():
     # bucket_name = os.getenv('RAW_DATA_BUCKET')
