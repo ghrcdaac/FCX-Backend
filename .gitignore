@@ -3,3 +3,4 @@ env.sh
 .idea
 __pycache__/
 *test_data*
+tmp/
