@@ -10,6 +10,7 @@ from metpy.units import units
 
 import boto3
 from boto3 import client as boto_client
+from botocore.exceptions import ClientError, NoCredentialsError
 
 class DropsondeSkewT:
   def __init__(self):
@@ -27,7 +28,14 @@ class DropsondeSkewT:
         keys.append(url)
     return keys
     
-  def upload_file(self):
+  def upload_file(self, source_file_path, bucket_name="ghrc-fcx-field-campaigns-szg", prefix="CPEX-AW/instrument-processed-data/dropsonde"):
+    s3 = boto3.client('s3')
+    try:
+      s3.upload_file(source_file_path, bucket_name, prefix)
+    except ClientError as e:
+      print(e)
+    except NoCredentialsError:
+        print("%%Credentials not available")
     pass
   
   def data_reader(self, s3_url):
@@ -141,11 +149,17 @@ def main():
       print("Generating skewT for: ", s3_url)
       data = ds.data_reader(s3_url)
       (lon, lat, alt, time, rh, dp, tdry, pressure, u_wind, v_wind) = data
+      name = s3_url.split('/')[-1]
+      date = name.split('_D')[1].split('_')[0]
+      time = name.split('_D')[1].split('_')[1]
       # create dir for stroing skewT images
-      path = r'/tmp/dropsonde/output/skewT'
+      path = r'/tmp/dropsonde/output/skewT/' + date
       if not os.path.exists(path):
         os.makedirs(path)
-      ds.generate_skewT(f"{path}/{s3_url.split('/')[-1]}.png", alt, pressure, tdry, dp, u_wind, v_wind)
+      # generaete skewT
+      ds.generate_skewT(f"{path}/{name}.png", alt, pressure, tdry, dp, u_wind, v_wind)
+      # upload the generated skewT
+      ds.upload_file(f"{path}/{name}.png", bucket_name="ghrc-fcx-field-campaigns-szg", prefix=f"CPEX-AW/instrument-processed-data/dropsonde/skewT/{date}/dropsonde-{time}.png")
       print("Generated skewT for: ", s3_url)
     except Exception as e:
       print("Error during conversion for: ", s3_url, ". Error on", e)
