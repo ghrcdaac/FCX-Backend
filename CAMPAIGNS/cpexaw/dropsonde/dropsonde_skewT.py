@@ -1,3 +1,4 @@
+import os
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -21,18 +22,20 @@ class DropsondeSkewT:
     keys = []
     for obj in s3bucket.objects.filter(
             Prefix=f"{prefix}/CPEXAW-DROPSONDE_"):
-        url = "s3://" + bucket_name + "/" + prefix + "/" + obj.key
+        url = "s3://" + bucket_name + "/" + obj.key
+        # url = f"https://{bucket_name}.s3.amazonaws.com" + "/" + prefix + "/" + obj.key
         keys.append(url)
     return keys
     
   def upload_file(self):
     pass
   
-  def data_reader(self, key):
+  def data_reader(self, s3_url):
     ## Open data file
-    print(key.split("/")[-1])
+    bucket_name = s3_url.split("/")[2]
+    key = s3_url.split(f"{bucket_name}/")[-1] # need key without starting /
     s3 = boto_client('s3')
-    fileobj = s3.get_object(Bucket="ghrc-fcx-field-campaigns-szg", Key="/"+key.split("//")[1])
+    fileobj = s3.get_object(Bucket=bucket_name, Key=key)
     file = fileobj['Body'].read()
     with xr.open_dataset(file, decode_cf=False) as ds:
         rh = ds['rh'].values # relative humidity
@@ -90,7 +93,7 @@ class DropsondeSkewT:
     
     return (lon, lat, alt, time, rh, dp, tdry, pressure, u_wind, v_wind)
   
-  def generate_skewT(self, fileName, height, pressure, temperature, dewpoint, u_wind, v_wind):
+  def generate_skewT(self, file_path, height, pressure, temperature, dewpoint, u_wind, v_wind):
     df = pd.DataFrame(dict(zip(('height','pressure','temperature','dewpoint','u_wind','v_wind'),(height, pressure, temperature, dewpoint, u_wind, v_wind))))
 
     # Drop any rows with all NaN values for T, Td, winds
@@ -126,15 +129,26 @@ class DropsondeSkewT:
     skew.plot_mixing_lines()
     skew.ax.set_ylim(1000, 100)
 
-    plt.savefig(f'/tmp/dropsonde/output/skewT/{fileName}.png')
+    plt.savefig(file_path)
+    plt.close()
 
 
 def main():
   ds = DropsondeSkewT()
-  keylist = ds.get_files()
-  for key in keylist:
-    data = ds.data_reader(key)
-    (lon, lat, alt, time, rh, dp, tdry, pressure, u_wind, v_wind) = data
-    ds.generate_skewT(key.split("/")[-1], alt, pressure, tdry, dp, u_wind, v_wind)
+  s3_url_list = ds.get_files()
+  for s3_url in s3_url_list:
+    try:
+      print("Generating skewT for: ", s3_url)
+      data = ds.data_reader(s3_url)
+      (lon, lat, alt, time, rh, dp, tdry, pressure, u_wind, v_wind) = data
+      # create dir for stroing skewT images
+      path = r'/tmp/dropsonde/output/skewT'
+      if not os.path.exists(path):
+        os.makedirs(path)
+      ds.generate_skewT(f"{path}/{s3_url.split('/')[-1]}.png", alt, pressure, tdry, dp, u_wind, v_wind)
+      print("Generated skewT for: ", s3_url)
+    except Exception as e:
+      print("Error during conversion for: ", s3_url, ". Error on", e)
+  print("Done!")
     
 main()
