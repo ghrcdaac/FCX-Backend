@@ -36,7 +36,6 @@ class DropsondeSkewT:
       print(e)
     except NoCredentialsError:
         print("%%Credentials not available")
-    pass
   
   def data_reader(self, s3_url):
     ## Open data file
