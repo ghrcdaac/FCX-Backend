@@ -63,7 +63,7 @@ def main():
       data = ds.data_reader(s3_url)
       if not os.path.exists(path):
         os.makedirs(path)
-      ingest(path, data)
+      ingest(path, data, date, time)
       # generaete pointcloud
       point_cloud_folder = f"{path}/point_cloud"
       generate_point_cloud("ref",  0,  1000000000000, path, point_cloud_folder)

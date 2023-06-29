@@ -1,6 +1,8 @@
 import zarr
 import numpy as np
 import xarray as xr
+from datetime import datetime, timedelta
+from metpy.units import units
 
 # META needed for ingest
 campaign = 'CPEX-AW'
@@ -12,12 +14,14 @@ chunk = 262144
 to_rad = np.pi / 180
 to_deg = 180 / np.pi
 
-def ingest(folder, file):
+def ingest(folder, file, date, time):
     """
     Converts Level 1B crs data from s3 to zarr file and then stores it in the provided folder
     Args:
         folder (string): name to hold the raw files.
         file (string): file to open
+        date (string): date when dropsonde was dropped
+        time (string): time when dropsonde was dropped
     """
     store = zarr.DirectoryStore(folder)
     root = zarr.group(store=store)
@@ -30,10 +34,7 @@ def ingest(folder, file):
     z_ref = z_vars.create_dataset('ref', shape=(0), chunks=(chunk), dtype=np.float32)
     n_time = np.array([], dtype=np.int64)
 
-    # date = file.split("_")[2]
-    date = ""
-    base_time = ""
-    # base_time = np.datetime64('{}-{}-{}'.format(date[:4], date[4:6], date[6:]))
+    base_time = stringToDateTime(date, time)
 
     # open dataset.
     with xr.open_dataset(file, decode_cf=False) as ds:
@@ -43,16 +44,22 @@ def ingest(folder, file):
         lat = ds['lat'].values
         lon = ds['lon'].values
         alt = ds['alt'].values
-        time = ds['time'].values
+        timesec = ds['time'].values
+    timestr = np.vectorize(addDelta)(base_time, timesec)
+    time = np.array(timestr, dtype='datetime64[s]').astype(np.int64)
 
-    # data formation
+    # Data formation
+
+    # Not needed all the data points at single point
+    # ref = np.column_stack((rh, dp, tdry)).reshape(-1)
+    # # as 3 kind of data at a single point in 3d space(lon lat alt) in a given time
+    # lon = np.repeat(lon, 3)
+    # lat = np.repeat(lat, 3)
+    # alt = np.repeat(alt, 3)
+    # time = np.repeat(time, 3)
     
-    ref = np.column_stack((rh, dp, tdry)).reshape(-1)    
-    # as 3 kind of data at a single point in 3d space(lon lat alt) in a given time
-    lon = np.repeat(lon, 3)
-    lat = np.repeat(lat, 3)
-    alt = np.repeat(alt, 3)
-    time = np.repeat(time, 3)
+    # instead only show one data point at one location and time (save render computation)
+    ref = tdry * units.degC
 
     # sort data by time
     sort_idx = np.argsort(time)
@@ -97,3 +104,15 @@ def ingest(folder, file):
         "epoch": int(epoch)
 
     })
+
+# UTILS
+
+def stringToDateTime(date_str, time_str):
+  date = datetime.strptime(date_str, '%Y%m%d')
+  time = datetime.strptime(time_str, '%H%M%S')
+  return datetime.combine(date.date(), time.time())
+
+def addDelta(dateTime, s):
+  delta = timedelta(milliseconds=s*1000)
+  combined_date_time = (dateTime + delta)
+  return combined_date_time.isoformat(sep='T', timespec='auto')
