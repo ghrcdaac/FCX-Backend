@@ -1,7 +1,5 @@
 import os
-import xarray as xr
-import numpy as np
-import pandas as pd
+import shutil
 
 import boto3
 from boto3 import client as boto_client
@@ -10,7 +8,7 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from helper.ingestToZarr import ingest
 from helper.pointcloud import generate_point_cloud
 
-class DropsondeSkewT:
+class Dropsonde3DTiles:
   def __init__(self):
     # constructor
     pass
@@ -50,7 +48,7 @@ class DropsondeSkewT:
 
 
 def main():
-  ds = DropsondeSkewT()
+  ds = Dropsonde3DTiles()
   s3_url_list = ds.get_files()
   for s3_url in s3_url_list:
     try:
@@ -63,12 +61,16 @@ def main():
       data = ds.data_reader(s3_url)
       if not os.path.exists(path):
         os.makedirs(path)
+      else:
+        shutil.rmtree(path)
+        os.makedirs(path)
       ingest(path, data, date, time)
       # generaete pointcloud
       point_cloud_folder = f"{path}/point_cloud"
       generate_point_cloud("ref",  0,  1000000000000, path, point_cloud_folder)
       # upload the generated 3dtile
-      ds.upload_file(f"{path}/point_cloud", bucket_name="ghrc-fcx-field-campaigns-szg", prefix=f"CPEX-AW/instrument-processed-data/dropsonde/3dtiles/{date}/dropsonde-{time}")
+      ds.upload_file(f"{path}/point_cloud", bucket_name="ghrc-fcx-field-campaigns-szg", prefix=f"CPEX-AW/instrument-processed-data/dropsonde/3dtiles/{date}")
+      # ds.upload_file(f"{path}/point_cloud", bucket_name="ghrc-fcx-field-campaigns-szg", prefix=f"CPEX-AW/instrument-processed-data/dropsonde/3dtiles/{date}/dropsonde-{time}")
       print("Generated skewT for: ", s3_url)
     except Exception as e:
       print("Error during conversion for: ", s3_url, ". Error on", e)
