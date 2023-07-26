@@ -50,7 +50,8 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         output_czml = writer.get_string()
         output_name = os.path.splitext(os.path.basename(infile))[0]
         output_name_wo_time = output_name.split("-")[0];
-        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_name_wo_time}.czml"
+        output_general_name = "hs3_navgh_IWG1_" + output_name_wo_time.split("_")[-1]
+        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_general_name}.czml"
         s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
         print(infile+" conversion done.")
 
