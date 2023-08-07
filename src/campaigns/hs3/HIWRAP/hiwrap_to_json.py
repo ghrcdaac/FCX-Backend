@@ -36,10 +36,13 @@ def stringToDateTime(date_str, time_str):
   time = datetime.strptime(time_str, '%H%M%S')
   return datetime.combine(date.date(), time.time())
 
-def addDelta(dateTime, s):
-  delta = timedelta(milliseconds=s*1000)
-  combined_date_time = (dateTime + delta)
-  return combined_date_time.isoformat(sep='T', timespec='auto')
+def addDelta(sdate, seconds):
+  time = timedelta(seconds=np.float64(seconds))
+  date = datetime.strptime(sdate, '%Y%m%d')
+  correction_date = timedelta(days=3) # conversion yields 3 days more than actual date
+  # print(date)
+  combined_datetime = date + time - correction_date
+  return (combined_datetime.isoformat(sep='T', timespec='auto'))
 
 def ingest(folder, file, s3bucket):
     """
@@ -60,8 +63,6 @@ def ingest(folder, file, s3bucket):
     n_time = np.array([], dtype=np.int64)
 
     date = get_date_from_filename(file)
-    # base_time = np.datetime64('{}-{}-{}'.format(date[:4], date[4:6], date[6:]))
-    base_time = stringToDateTime(date, "000000")
 
     print("Accessing file from S3 ", file)
     filepath = downloadFromS3(s3bucket, file, f"{folder}/nc")
@@ -90,7 +91,7 @@ def ingest(folder, file, s3bucket):
     rad_range = np.tile(rad_range, num_col)
     ref = ref.flatten()
 
-    timestr = np.vectorize(addDelta)(base_time, timesec)
+    timestr = np.vectorize(addDelta)(date, timesec)
     time = np.array(timestr, dtype='datetime64[s]').astype(np.int64)
 
     x, y, z = down_vector(roll, pitch, head)
