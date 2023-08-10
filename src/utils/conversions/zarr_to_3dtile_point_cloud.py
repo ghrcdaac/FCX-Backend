@@ -4,14 +4,21 @@ import zarr
 import numpy as np
 import json
 import datetime as dt
-from .tileset import PointCloud
-
-
+from helpers.pointcloud import PointCloud
 
 to_rad = np.pi / 180.0
 to_deg = 180.0 / np.pi
 
-def generate_point_cloud(variable, epoch, end, zarr_location, point_cloud_folder):
+def zarr_to_3dtile_point_cloud(variable, epoch, end, zarr_location, point_cloud_folder):
+    """Generates json pointcloud from a given zarr file input
+
+    Args:
+        variable (_type_): _description_
+        epoch (_type_): _description_
+        end (_type_): _description_
+        zarr_location (string): source zarr file.
+        point_cloud_folder (string): destination folder for 3d tile json file.
+    """
 
     #out_key = f"{os.getenv('CRS_OUTPUT_FLIGHT_PATH')}/{shortname}"
     #pc_out_key = f"{output_path}/point_cloud"
@@ -28,9 +35,8 @@ def generate_point_cloud(variable, epoch, end, zarr_location, point_cloud_folder
     except:
         pass
 
-
+    # LOAD THE DATA.
     store = zarr.DirectoryStore(zarr_location)
-
     root = zarr.group(store=store)
 
     chunk_id = root["chunk_id"][:]
@@ -48,7 +54,8 @@ def generate_point_cloud(variable, epoch, end, zarr_location, point_cloud_folder
     value = root["value"][variable][start_id:end_id]
     time = root["time"][start_id:end_id]
 
-    epoch = epoch - root_epoch
+    # filter data using mask
+    epoch = epoch - root_epoch # date-time
     end = end - root_epoch
     mask = np.logical_and(time >= epoch, time <= end)
     lon = lon[mask]
@@ -57,6 +64,7 @@ def generate_point_cloud(variable, epoch, end, zarr_location, point_cloud_folder
     value = value[mask]
     time = time[mask]
 
+    # Generate Pointcloud Tileset
     point_cloud = PointCloud(point_cloud_folder, lon, lat, alt, value, time, root_epoch)
 
     for tile in range(int(np.ceil(time.size / 530000))):
