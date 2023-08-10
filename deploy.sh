@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# This deployment script is for GOESRPLT Campaign; and needs addition of other field campaigns.
 source ~/.bashrc
 
 if ! conda &> /dev/null
