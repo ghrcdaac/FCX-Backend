@@ -35,7 +35,7 @@ def upload_folder_to_s3(folder, bucket_name, s3_key):
     for file in files:
         fname = os.path.join(folder, file) # SOURCE
         s3_key_f = f"{s3_key}/{file}" # can have hiecharchical destination as key
-        print(f"uploaded to {s3_key}.")
+        # print(f"uploaded {file} to {s3_key}.")
         upload_to_s3(fname, bucket_name, s3_key_f)
     print("Folder uploaded.")
 

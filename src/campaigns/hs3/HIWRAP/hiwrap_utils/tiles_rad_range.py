@@ -97,5 +97,5 @@ def get_date_from_url(url: str) -> np.datetime64:
   # date is in the format of YYYYMMDD
   # eg. 20190801
   date = url.split("HS3_HIWRAP_")[1].split("_")[0]
-  np_date = np.datetime64('{}-{}-{}'.format(date[:4], date[4:6], date[6:]))
+  np_date = np.datetime64('{}{}{}'.format(date[:4], date[4:6], date[6:]))
   return np_date
