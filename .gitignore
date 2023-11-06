@@ -4,3 +4,4 @@ env.sh
 __pycache__/
 *test_data*
 tmp/
+temp/
