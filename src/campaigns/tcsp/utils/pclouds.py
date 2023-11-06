@@ -1,8 +1,8 @@
-#--- pycode/pcloud_subs.py
 import numpy as np
 import json
 from datetime import datetime, timedelta
 from matplotlib import cm
+
 
 to_rad = np.pi / 180
 to_deg = 180 / np.pi
@@ -12,23 +12,6 @@ def regionrad(region):
 
 def sec2Z(t): 
     return "{}Z".format(datetime.utcfromtimestamp(t).isoformat())
-
-
-class Tileset:
-    def __init__(self, Dataset, bigbox, time0):
-        print("time0:", time0)
-        self.json = {
-            "asset": {"version": "1.0",
-                     "type": Dataset },
-            "root": {"geometricError": 1000000,
-                     "refine" : "REPLACE",
-                     "boundingVolume": {"region": regionrad(bigbox)},
-                     "children": []  },
-            "properties": {"epoch": "{}Z".format(datetime.utcfromtimestamp(time0).isoformat()),
-                           "refined": [] }  }
-        self.parent=self.json["root"]
-        print("{}Z".format(datetime.utcfromtimestamp(time0).isoformat()))
-
 
 def make_pcloudTile(vname, tile, tileset, DF, epoch, end, folder):
 
@@ -43,7 +26,7 @@ def make_pcloudTile(vname, tile, tileset, DF, epoch, end, folder):
     timep =  DF['timeP'].to_numpy()
     
     csize = 4
-    if(vname=='dBZe'):
+    if(vname=='ref'):
         ccode = color_encodeDBZ(DF[vname].copy())
     elif(vname=='CPL' or vname.lower()=='atb'):
         ccode = color_encodeATB(DF[vname].copy())
@@ -298,5 +281,6 @@ def color_encodeATB(var):
         rgba[iL,:] = np.array([cn,cn-50,cn,opa]) #/255
         ccode[(var>atbPLvs[iL]) & (var<=atbPLvs[iL+1]),:] = rgba[iL,:]
     return ccode
+
 
 

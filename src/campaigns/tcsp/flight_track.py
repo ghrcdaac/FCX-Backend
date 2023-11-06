@@ -98,6 +98,7 @@ class FlightTrackReader():
         pass
   
     def read_csv(self, infile):
+        print("read_csv", infile)
         data = generator_to_np(infile)
 
         col_index_map = get_col_index_map()
@@ -120,7 +121,7 @@ class FlightTrackReader():
         df = df[~mask]
         df = df.reset_index(drop=True)
         df_filtered = df.iloc[::3] 
-        # print(df_filtered)
+        print(df_filtered)
         return df_filtered
 
 def process_tracks():
@@ -129,7 +130,7 @@ def process_tracks():
     s3bucket = s3_resource.Bucket(bucket)
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2"):
+            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050727_9035"):
         keys.append(obj.key)
 
     result = keys
@@ -137,19 +138,23 @@ def process_tracks():
     
     for infile in result:    
         s3_file = s3_client.get_object(Bucket=bucket, Key=infile)
+        print(infile)
         data = s3_file['Body'].iter_lines()
         reader = FlightTrackReader()
         NavData = reader.read_csv(data)
+        return NavData
         
-        writer = FlightTrackCzmlWriter(len(NavData))
-        writer.set_with_df(NavData)
+        # writer = FlightTrackCzmlWriter(len(NavData))
+        # writer.set_with_df(NavData)
         
-        file_name = os.path.splitext(os.path.basename(infile))[0]
-        output_directory = "tcsp/instrument-processed-data/ER2_Flight_Nav"
-        outfile = os.path.join(output_directory, f"{file_name}.czml")
-        print(file_name, outfile)
-        s3_client.put_object(Body=writer.get_czml_string(), Bucket=bucket, Key=outfile)
-        print(f'Upload complete.\n\n')
+        # file_name = os.path.splitext(os.path.basename(infile))[0]
+        # file_name = "_".join(file_name.split("_")[0:3])
+        # print(file_name)
+        # output_directory = "tcsp/instrument-processed-data/ER2_Flight_Nav"
+        # outfile = os.path.join(output_directory, f"{file_name}.czml")
+        # print(file_name, outfile)
+        # s3_client.put_object(Body=writer.get_czml_string(), Bucket=bucket, Key=outfile)
+        # print(f'Upload complete.\n\n')
 
 
 process_tracks()

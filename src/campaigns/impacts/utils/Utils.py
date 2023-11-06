@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import h5py
 import os, io
+from datetime import datetime, timedelta
 
 to_rad = np.pi / 180
 to_deg = 180 / np.pi
@@ -86,7 +87,7 @@ def ER2Radar(Radar,Hfile):
             band = fh5['Products/Data']
             data={'W':{'dBZe': band['dBZe'][()],
                        'LDR': band['LDR'][()],
-                       'Vel': band['Velocity'][()],
+                       'Vel': band['Velocity_corrected'][()],
                        'spW': band['SpectrumWidth'][()]  } }
         elif(Radar=='EXRAD'):
             band = fh5['Products/Data']
