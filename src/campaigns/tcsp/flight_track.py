@@ -121,8 +121,9 @@ class FlightTrackReader():
         df = df[~mask]
         df = df.reset_index(drop=True)
         df_filtered = df.iloc[::3] 
-        print(df_filtered)
-        return df_filtered
+        # print("df>>>\n",df)
+        # print(df_filtered)
+        return df, df_filtered
 
 def process_tracks():
     s3_resource = boto3.resource('s3')
@@ -130,7 +131,7 @@ def process_tracks():
     s3bucket = s3_resource.Bucket(bucket)
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050727_9035"):
+            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050727"):
         keys.append(obj.key)
 
     result = keys
@@ -141,8 +142,9 @@ def process_tracks():
         print(infile)
         data = s3_file['Body'].iter_lines()
         reader = FlightTrackReader()
-        NavData = reader.read_csv(data)
-        return NavData
+        CRSdata, NavData = reader.read_csv(data)
+        print(CRSdata)
+        return CRSdata
         
         # writer = FlightTrackCzmlWriter(len(NavData))
         # writer.set_with_df(NavData)

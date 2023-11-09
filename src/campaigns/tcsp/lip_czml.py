@@ -14,8 +14,8 @@ def readCZML(fileER2):
     # print(df1)
     
     print(fileER2)
-    data = generator_to_np(fileER2, "ER2")
-    #print(data)
+    data = generator_to_np(fileER2)
+    # print(data)
     col_index_map = get_col_index_map()
     data = pd.DataFrame(data)
     print(data)
@@ -51,9 +51,9 @@ def makeCZML(fileER2):
 
     #compare merged_df_1 with LIP wrt time
     merged_df = pd.merge(readCZML(fileER2), df3, on="Time", how="inner")
-    print(merged_df)
+    # print(merged_df)
 
-    # print("merged_df>>>>\n",merged_df)
+    print("merged_df>>>>\n",merged_df)
 
     df = merged_df.groupby(['Time', 'Date'], as_index=False).agg({'Ex': 'mean', 'Ey': 'mean', 'Ez': 'mean', 'Eq': 'mean',
                                                             'lat': 'mean', 'lon': 'mean'})
@@ -69,33 +69,33 @@ def makeCZML(fileER2):
     print(df)
 
 
-    czmlBody = [{"id": "document",
-                    "name": "LIP",
-                    "version": "1.0", }]
+    # czmlBody = [{"id": "document",
+    #                 "name": "LIP",
+    #                 "version": "1.0", }]
 
-    LIP = df[['Date', 'Time', 'time2',
-                'Ex', 'Ey', 'Ez', 'lat', 'lon']]
-    print(LIP)
+    # LIP = df[['Date', 'Time', 'time2',
+    #             'Ex', 'Ey', 'Ez', 'lat', 'lon']]
+    # print(LIP)
 
-    for d, t, t2, ex, ey, ez, lat, lon in zip(LIP.Date, LIP.Time, LIP.time2,
-                                                LIP.Ex, LIP.Ey, LIP.Ez,
-                                                LIP.lat, LIP.lon):
-        xb = ex * .05
-        yb = ey * .05
-        zb = ez * 2000
-        packet = {
-            'id': t,
-            'availability': d + 'T' + t + 'Z/' + t2,
-            'polyline': {
-                'positions': {'cartographicDegrees': [lon, lat, 0,
-                                                        lon + xb, lat + yb, 0 + zb]},
-                'material': {
-                    'polylineArrow': {
-                        'color': {'rgba': [255, 55, 55, 255], }, }, },
-                'width': 5}
-        }
+    # for d, t, t2, ex, ey, ez, lat, lon in zip(LIP.Date, LIP.Time, LIP.time2,
+    #                                             LIP.Ex, LIP.Ey, LIP.Ez,
+    #                                             LIP.lat, LIP.lon):
+    #     xb = ex * .05
+    #     yb = ey * .05
+    #     zb = ez * 2000
+    #     packet = {
+    #         'id': t,
+    #         'availability': d + 'T' + t + 'Z/' + t2,
+    #         'polyline': {
+    #             'positions': {'cartographicDegrees': [lon, lat, 0,
+    #                                                     lon + xb, lat + yb, 0 + zb]},
+    #             'material': {
+    #                 'polylineArrow': {
+    #                     'color': {'rgba': [255, 55, 55, 255], }, }, },
+    #             'width': 5}
+    #     }
 
-        czmlBody.append(packet)
+    #     czmlBody.append(packet)
 
     # LIPczml = json.dumps(czmlBody)
     # filepath = "/Users/Indhuja/Desktop/tcsp/lip/LIP0607.czml"
@@ -105,14 +105,14 @@ def makeCZML(fileER2):
 
 fileLIP = glob.glob('/Users/Indhuja/Desktop/tcsp/lip/TCSP_LIP_cond_2005.187_050706_1948.txt')[0]
 fileER2 = glob.glob('/Users/Indhuja/Desktop/tcsp/ER2/tcsp_naver2_20050706_9026.txt')[0]
-
+print(fileER2)
 def process_tracks():
     s3_resource = boto3.resource('s3')
     bucket = "ghrc-fcx-field-campaigns-szg"
     s3bucket = s3_resource.Bucket(bucket)
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050727_9034"):
+            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050706"):
         keys.append(obj.key)
 
     result = keys
@@ -122,6 +122,7 @@ def process_tracks():
         s3_file = s3_client.get_object(Bucket=bucket, Key=infile)
         print(infile)
         data = s3_file['Body'].iter_lines()
+        #readCZML(data)
         makeCZML(data)
 
 process_tracks()

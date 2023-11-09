@@ -26,7 +26,7 @@ def get_col_index_map():
 def generator_to_np(infile):
     modified_lines = []
     # if(instrument == 'LIP'):
-    #     with open(infile, 'r') as f:
+    # with open(infile, 'r') as f:
     #         lines = f.readlines()
     #         for il, line in enumerate(lines):
     #             if(il > 5):
