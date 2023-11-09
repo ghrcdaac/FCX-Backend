@@ -143,6 +143,7 @@ def process_tracks():
         data = s3_file['Body'].iter_lines()
         reader = FlightTrackReader()
         CRSdata, NavData = reader.read_csv(data)
+        print("Data passed to CRS>>>>>")
         print(CRSdata)
         return CRSdata
         
