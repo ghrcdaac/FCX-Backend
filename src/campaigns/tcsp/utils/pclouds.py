@@ -57,7 +57,6 @@ class PointCloud:
     def worker_function(self):
         while len(self.tasks) > 0:
                 tile, start, end = self.tasks.pop()
-                print(tile, start, end)
                 self.generate(tile, start, end)
 
 
@@ -78,7 +77,6 @@ class PointCloud:
 
 
     def generate(self, tile, start, end):
-        print(tile, start, end)
         parent_tile = self.tileset_json["root"]
         cartesian, offset, scale, cartographic, region = self.cartographic_to_cartesian(start, end)
 

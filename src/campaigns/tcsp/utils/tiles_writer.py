@@ -3,9 +3,6 @@ import zarr
 import numpy as np
 from .pclouds import PointCloud
 
-to_rad = np.pi / 180.0
-to_deg = 180.0 / np.pi
-
 def write_tiles(variable, epoch, end, zarr_location, point_cloud_folder):
     """Generates json pointcloud from a given zarr file input
 
@@ -37,14 +34,10 @@ def write_tiles(variable, epoch, end, zarr_location, point_cloud_folder):
     root = zarr.group(store=store)
 
     chunk_id = root["chunk_id"][:]
-    print("chunk_id:",chunk_id)
     num_chunks = chunk_id.shape[0]
-    print("num_chunks:",num_chunks)
     id = np.argmax(chunk_id[:, 1] > epoch) - 1
-    print("id:", id, "chunk_id[:, 1]:", chunk_id[:, 1])
     start_id = chunk_id[0 if id < 0 else id, 0]
     id = num_chunks - np.argmax(chunk_id[::-1, 1] < end)
-    print("id:", id, "chunk_id[::-1, 1]",chunk_id[::-1, 1])
     end_id = chunk_id[id, 0] if id < num_chunks else root["time"].size - 1
 
     root_epoch = root.attrs["epoch"]

@@ -6,7 +6,7 @@ import json
 import math
 import os
 
-from utils.ingest_utils import generator_to_np, get_col_index_map, convert_to_datetime
+from utils.flightnav_utils import generator_to_df, get_col_index_map, convert_to_datetime
 
 model = {
     "id": "Flight Track",
@@ -99,7 +99,7 @@ class FlightTrackReader():
   
     def read_csv(self, infile):
         print("read_csv", infile)
-        data = generator_to_np(infile)
+        data = generator_to_df(infile)
 
         col_index_map = get_col_index_map()
         data = pd.DataFrame(data)
@@ -116,48 +116,56 @@ class FlightTrackReader():
 
         df = pd.DataFrame(data = {"timestamp": time, "heading": heading, "pitch": pitch, "roll": roll,  "altitude": gAltitude, "latitude": gLatitude, "longitude": gLongitude})
         df["timestamp"] = df["timestamp"].apply(convert_to_datetime)
-        # print(df)
-        mask = (df == 0).any(axis=1)
-        df = df[~mask]
+
+        #Remove rows representing North Pole coordinates
+        df = df[(df['latitude'] != 90) | (df['longitude'] != 0)]
         df = df.reset_index(drop=True)
-        df_filtered = df.iloc[::3] 
+
+        #for LIP, only time is needed
+        df["Time"] = df["timestamp"].dt.time
+        df["Time"] = df["Time"].apply(lambda x: x.strftime('%H:%M:%S'))
+        
+        df_filtered = df.iloc[::3]
+        df_filtered = df_filtered.reset_index(drop=True) 
         # print("df>>>\n",df)
         # print(df_filtered)
         return df, df_filtered
 
-def process_tracks():
-    s3_resource = boto3.resource('s3')
-    bucket = "ghrc-fcx-field-campaigns-szg"
-    s3bucket = s3_resource.Bucket(bucket)
-    keys = []
-    for obj in s3bucket.objects.filter(
-            Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_20050727"):
-        keys.append(obj.key)
+    def process_tracks(self, date='', isLIP=''):
+        s3_resource = boto3.resource('s3')
+        bucket = "ghrc-fcx-field-campaigns-szg"
+        s3bucket = s3_resource.Bucket(bucket)
+        keys = []
+        for obj in s3bucket.objects.filter(
+                Prefix=f"tcsp/instrument-raw-data/ER2_Flight_Nav/tcsp_naver2_{date}"):
+            keys.append(obj.key)
 
-    result = keys
-    s3_client = boto3.client('s3')
-    
-    for infile in result:    
-        s3_file = s3_client.get_object(Bucket=bucket, Key=infile)
-        print(infile)
-        data = s3_file['Body'].iter_lines()
-        reader = FlightTrackReader()
-        CRSdata, NavData = reader.read_csv(data)
-        print("Data passed to CRS>>>>>")
-        print(CRSdata)
-        return CRSdata
+        result = keys
+        s3_client = boto3.client('s3')
         
-        # writer = FlightTrackCzmlWriter(len(NavData))
-        # writer.set_with_df(NavData)
-        
-        # file_name = os.path.splitext(os.path.basename(infile))[0]
-        # file_name = "_".join(file_name.split("_")[0:3])
-        # print(file_name)
-        # output_directory = "tcsp/instrument-processed-data/ER2_Flight_Nav"
-        # outfile = os.path.join(output_directory, f"{file_name}.czml")
-        # print(file_name, outfile)
-        # s3_client.put_object(Body=writer.get_czml_string(), Bucket=bucket, Key=outfile)
-        # print(f'Upload complete.\n\n')
+        for infile in result:    
+            s3_file = s3_client.get_object(Bucket=bucket, Key=infile)
+            data = s3_file['Body'].iter_lines()
+            reader = FlightTrackReader()
+            result, NavData = self.read_csv(data)
+
+            #send ER2 data to LIP/CRS
+            if (isLIP):
+                result = result.drop(columns=['timestamp', 'heading', 'pitch', 'roll'])
+            else:
+                result = result.drop(columns=['altitude', 'latitude', 'longitude'])
+
+            return result
+            
+            # writer = FlightTrackCzmlWriter(len(NavData))
+            # writer.set_with_df(NavData)
+            # file_name = os.path.splitext(os.path.basename(infile))[0]
+            # file_name = "_".join(file_name.split("_")[0:3])
+            # output_directory = "tcsp/instrument-processed-data/ER2_Flight_Nav"
+            # outfile = os.path.join(output_directory, f"{file_name}.czml")
+            # s3_client.put_object(Body=writer.get_czml_string(), Bucket=bucket, Key=outfile)
+            # print(f'Upload complete.\n\n')
 
 
-process_tracks()
+# call process_tracks for flight track
+# FlightTrackReader().process_tracks()
