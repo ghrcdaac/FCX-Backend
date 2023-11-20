@@ -5,11 +5,13 @@ import h5py
 import json
 from glob import glob
 from datetime import datetime, timedelta
-from utils.Utils import *
-from utils.pcloud_subs import *
+from pycode.Utils import *
+from pycode.pcloud_subs import *
 
 
-hpref = {'CRS':'IMPACTS_CRS_L1B_RevB_'}
+hpref = {'HIWRAP':'IMPACTS_HIWRAP_L1B_RevA_',
+         'CRS':'IMPACTS_CRS_L1B_RevA_',
+         'EXRAD':'IMPACTS_EXRAD_Nadir_L1B_RevB_'}
 
 Bands = {'HIWRAP': ['Ka','Ku'],
          'CRS': ['W'],
@@ -28,10 +30,7 @@ units = {'dBZe':'dBZ',
 def mk_RADpcloud(Radar, fdate, dataDir, outDir0):
                   
     sdate = fdate.replace('-','')
-    print(dataDir+hpref[Radar]+sdate)
     Hfile = glob(dataDir+hpref[Radar]+sdate+'*.h5')[0]
-    print(Hfile)
-    
     
     Vars = VARs[Radar]
     RADs = RADdf(Radar, Hfile,Bands[Radar], Vars)
@@ -52,22 +51,16 @@ def mk_RADpcloud(Radar, fdate, dataDir, outDir0):
         t1970 = datetime(1970,1,1)
         t0 = datetime.strptime(fdate,"%Y-%m-%d")
         tFlight = datetime.strptime(fdate + tInstr[fdate], "%Y-%m-%dT%H:%M:%SZ")
-        print("tflight:", tFlight)
-        print("RAD:", RAD['Time'][0])
 
         SecS = (tFlight - t1970).total_seconds()  #to be consistent with across all ER-2 measurements, 
         #SecS = RAD['Time'].min()                   #use RAD['Time'].min() for stand-alone
         SecE = RAD['Time'].max()
-        print(RAD['Time'])
         RAD['timeP'] = RAD['Time'] - SecS         #time is counted from SecS in visualization
-        print(SecS)
-        print("RAD:", RAD['timeP'][0])
 
         lonw, lone = RAD['lon'].min()-0.2, RAD['lon'].max()+0.2
         lats, latn = RAD['lat'].min()-0.2, RAD['lat'].max()+0.2
         altb, altu = RAD['alt'].min(),RAD['alt'].max()
         bigbox = [lonw, lats, lone, latn, altb, altu] #*to_rad
-        # print(bigbox)
 
         nPoints = len(RAD)
         Tsize = 500000
@@ -94,14 +87,13 @@ def mk_RADpcloud(Radar, fdate, dataDir, outDir0):
 
                 make_pcloudTile(vname, tile, tileset, subset, epoch, end, folder)
 
-    # return RAD
+    return RAD
 
 
 fdate='2020-02-27'
-dataDir = '/Users/Indhuja/Desktop/IMPACTS/input/'
+dataDir = '/Storage/Impacts/data/'
 for Radar in hpref:
    #Radar ='CRS'  #'CRS', 'EXRAD',' HIWRAP'
-    #outDir0 = '/Storage/Impacts/VISdata/'+fdate+'/'+Radar.lower()   #head dir for outputs
-    outDir0 = "/Users/Indhuja/Desktop/IMPACTS/output/"
+    outDir0 = '/Storage/Impacts/VISdata/'+fdate+'/'+Radar.lower()   #head dir for outputs
     
     RAD = mk_RADpcloud(Radar, fdate, dataDir, outDir0)

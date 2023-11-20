@@ -16,7 +16,6 @@ def sec2Z(t):
 
 class Tileset:
     def __init__(self, Dataset, bigbox, time0):
-        print("time0:", time0)
         self.json = {
             "asset": {"version": "1.0",
                      "type": Dataset },
