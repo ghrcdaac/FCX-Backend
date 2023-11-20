@@ -97,4 +97,3 @@ for Radar in hpref:
     outDir0 = '/Storage/Impacts/VISdata/'+fdate+'/'+Radar.lower()   #head dir for outputs
     
     RAD = mk_RADpcloud(Radar, fdate, dataDir, outDir0)
-    
