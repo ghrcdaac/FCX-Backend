@@ -13,7 +13,7 @@ def get_files(bucket_name="ghrc-fcx-field-campaigns-szg", prefix="CPEX-AW/instru
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"{prefix}/SCRX_Radiosonde_CPEXAW_"):
+            Prefix=f"{prefix}/SCRX_Radiosonde_CPEXAW_20210820_1018"):
         url = "s3://" + bucket_name + "/" + obj.key
         # url = f"https://{bucket_name}.s3.amazonaws.com" + "/" + prefix + "/" + obj.key
         keys.append(url)
@@ -31,16 +31,17 @@ def data_reader(s3_url):
 
 
 def upload_file(type, source_file_path, bucket_name="ghrc-fcx-field-campaigns-szg", prefix="CPEX-AW/instrument-processed-data/radiosonde"):
-  s3 = boto3.client('s3')
   try:
-    if(type == "3dTiles"):
+    if(type == "czml"):
+        s3 = boto3.resource('s3')
         files = os.listdir(source_file_path)
-        print(files)
         for file in files:
-            fname = os.path.join(source_file_path, file) # SOURCE
-            actualprefix = f"{prefix}/{file}" # DESTINATION
-            s3.upload_file(fname, bucket_name, actualprefix)
+            if file.endswith(".czml"):
+                fname = os.path.join(source_file_path, file) # SOURCE
+                actualprefix = f"{prefix}/{file}" # DESTINATION
+                s3.Bucket(bucket_name).upload_file(fname, actualprefix)
     elif(type == "skewT"):
+        s3 = boto3.client('s3')
         s3.upload_file(source_file_path, bucket_name, prefix)
   except ClientError as e:
     print(e)

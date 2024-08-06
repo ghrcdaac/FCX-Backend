@@ -51,7 +51,8 @@ def CRSaccess(fname, s3bucket=False, Verb=False):
     """
 
     print("\%% Accessing data from Cloud. This may take a little time...\n")
-    s3 = boto_client('s3', region_name=os.environ['AWS_REGION'])
+    # s3 = boto_client('s3', region_name=os.environ['AWS_REGION'])
+    s3 = boto_client('s3', region_name='us-east-1')
     fileobj = s3.get_object(Bucket=s3bucket, Key=fname)
     fileCRS = fileobj['Body'].read()
 
@@ -64,7 +65,7 @@ def get_CRS(fdate, s3bucket):
      CRSaccess()
      add24hr()
     """
-    fname = 'fieldcampaign/goesrplt/CRS/data/GOESR_CRS_L1B_' + fdate.replace('-', '') + '_v0.nc'
+    fname = 'CRS/data/GOESR_CRS_L1B_' + fdate.replace('-', '') + '_v0.nc'
     fileCRS = CRSaccess(fname, s3bucket=s3bucket)
     with xr.open_dataset(fileCRS, decode_cf=False) as ds:
         CRSlat = ds['lat'].values
@@ -86,7 +87,7 @@ def S3list(s3bucket, fdate, instrm, network='OKLMA'):
               # 'FEGS': 'fieldcampaign/goesrplt/FEGS/data/goesr_plt_FEGS_' + fdate.replace('-', '') + '_Flash',
               'CRS': 'fieldcampaign/goesrplt/CRS/data/GOESR_CRS_L1B_' + fdate.replace('-', ''),
               'NAV': 'fieldcampaign/goesrplt/NAV_ER2/data/goesrplt_naver2_IWG1_' + fdate.replace('-', ''),
-              'LMA': 'fieldcampaign/goesrplt/LMA/' + network + '/data/' + fdate + '/goesr_plt_' + network + '_' + fdate.replace(
+              'LMA': 'LMA/' + network + '/data/' + fdate + '/goesr_plt_' + network + '_' + fdate.replace(
                   '-', '')}
 
     print("S3list searching for ", prefix[instrm])
@@ -195,7 +196,7 @@ def get_LMA(bucket, file, stns_min=7, nheader=None):
     # print('No. of raw data:',len(DF))
     DF = DF[(DF['chi^2'] < 1) & (DF['Nstns'] >= stns_min)]
     DF.index = range(len(DF))
-    DF = DF.drop(['chi^2', 'mask'], 1)
+    DF = DF.drop(['chi^2', 'mask'], axis=1)
     # print('No. of filtered data:',len(DF))
 
     return DF, nheader
