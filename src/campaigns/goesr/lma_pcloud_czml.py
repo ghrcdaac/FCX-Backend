@@ -23,11 +23,13 @@ def Subset3(Org, start, end):
 def makePointCloud(fdate, network):
 
     fdate = fdate  # Flight date, in yyyy-mm-dd string
-    s3bucket = os.getenv('RAW_DATA_BUCKET')
-
+    # s3bucket = os.getenv('RAW_DATA_BUCKET')
+    s3bucket = 'fcx-raw-data'
+    
     # ---------------------------------------------------------------
 
-    folder = os.getenv('LMA_OUTPUT_PATH') + '/' + fdate + '_rgba/' + network + "/"
+    # folder = os.getenv('LMA_OUTPUT_PATH') + '/' + fdate + '_rgba/' + network + "/"
+    folder = "/Users/Indhuja/Downloads/NALMA/2017-04-11/" # local path
     mkfolder(folder)
 
     # ----get CRS/flight track & box region
@@ -96,8 +98,8 @@ def makePointCloud(fdate, network):
         tileset = Tileset(bigbox, epoch, network)
 
         end = int(end + Dt_show)
-        tileset.epoch = "{}Z".format(datetime.utcfromtimestamp(epoch).isoformat())
-        tileset.end = "{}Z".format(datetime.utcfromtimestamp(end).isoformat())
+        tileset.epoch = "{}Z".format(datetime.fromtimestamp(epoch).isoformat())
+        tileset.end = "{}Z".format(datetime.fromtimestamp(end).isoformat())
         print(sec2Z(epoch), sec2Z(end), len(subLTN.DF))
         log['tile' + str(tile)] = sec2Z(epoch) + '/' + sec2Z(end)
         subLTN.cartographic_to_cartesian()
@@ -123,9 +125,10 @@ def makePointCloud(fdate, network):
     # LMA tile czml
     ##########################
 
-    s3uri = f"https://{os.environ['OUTPUT_DATA_BUCKET']}.s3-{os.environ['AWS_REGION']}.amazonaws.com/fieldcampaign/goesrplt/"
+    # s3uri = f"https://{os.environ['OUTPUT_DATA_BUCKET']}.s3-{os.environ['AWS_REGION']}.amazonaws.com/fieldcampaign/goesrplt/"
 
-    s3path = f"s3://{os.environ['OUTPUT_DATA_BUCKET']}/{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{lma}/{network}"
+    # s3path = f"s3://{os.environ['OUTPUT_DATA_BUCKET']}/{os.environ['OUTPUT_DATA_BUCKET_KEY']}/fieldcampaign/goesrplt/{fdate}/{lma}/{network}"
+    s3uri = f"https://ghrc-fcx-viz-output.s3.us-west-2.amazonaws.com/fieldcampaign/goesrplt/"
 
     czmlBody = [{"id": "document",
                  "name": network + " Lightning",
@@ -144,11 +147,14 @@ def makePointCloud(fdate, network):
     CZMLfile.write(LMAczml)
     CZMLfile.close()
 
-    os.system(f"aws s3 sync {folder} {s3path}/")
+    # os.system(f"aws s3 sync {folder} {s3path}/")
 
-makePointCloud('2017-04-18', "NALMA")
-makePointCloud('2017-04-20', "SOLMA")
-makePointCloud('2017-04-22', "NALMA")
-makePointCloud('2017-05-08', "COLMA")
-makePointCloud('2017-05-17', "OKLMA")
-makePointCloud('2017-05-17', "WTXLMA")
+# makePointCloud('2017-04-18', "NALMA")
+# makePointCloud('2017-04-20', "SOLMA")
+# makePointCloud('2017-04-22', "NALMA")
+# makePointCloud('2017-05-08', "COLMA")
+# makePointCloud('2017-05-17', "OKLMA")
+# makePointCloud('2017-05-17', "WTXLMA")
+# print(os.getenv('RAW_DATA_BUCKET'))
+
+makePointCloud('2017-04-11', "NALMA")

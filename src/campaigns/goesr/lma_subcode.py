@@ -89,8 +89,8 @@ class lightning:
 
 class Tileset:
     def __init__(self, bigbox, CRStime0, instr):
-        self.epoch = datetime.utcfromtimestamp(CRStime0).isoformat()
-        self.end = datetime.utcfromtimestamp(CRStime0).isoformat()
+        self.epoch = datetime.fromtimestamp(CRStime0).isoformat()
+        self.end = datetime.fromtimestamp(CRStime0).isoformat()
         self.json = {
             "asset": {"version": "1.0",
                       "type": instr},
@@ -98,7 +98,7 @@ class Tileset:
                      "refine": "REPLACE",
                      "boundingVolume": {"region": regionrad(bigbox)},
                      "children": []},
-            "properties": {"epoch": "{}Z".format(datetime.utcfromtimestamp(CRStime0).isoformat()),
+            "properties": {"epoch": "{}Z".format(datetime.fromtimestamp(CRStime0).isoformat()),
                            "refined": []}}
         self.parent = self.json["root"]
 

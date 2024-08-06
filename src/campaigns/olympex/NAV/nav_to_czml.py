@@ -9,7 +9,7 @@ import os
 from nav_reader_writer import FlightTrackCzmlWriter 
 from nav_reader_writer import FlightTrackReader
 
-def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign = "Olympex", input_data_dir = "instrument-raw-data", output_data_dir = "instrument-processed-data", instrument_name = "nav_er2", row_name_index_map={}):
+def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign = "Olympex", input_data_dir = "instrument-raw-data", output_data_dir = "instrument-processed-data", instrument_name = "nav_dc8", row_name_index_map={}):
     """
     gets raw file path to s3 defined path.
     converts it to czml.
@@ -27,7 +27,7 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
     s3bucket = s3_resource.Bucket(bucket_name)    
     keys = []
     for obj in s3bucket.objects.filter(
-            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/data/"):
+            Prefix=f"{field_campaign}/{input_data_dir}/{instrument_name}/data/olympex_navdc8_IWG1_20151110"):
         keys.append(obj.key)
 
     result = keys
@@ -39,7 +39,13 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         reader = FlightTrackReader(row_name_index_map)
         reader.read_csv(data)
 
-        writer = FlightTrackCzmlWriter(reader.length)
+        plane = None
+        if(instrument_name == "nav_er2"):
+            plane = "ER2"
+        elif(instrument_name == "nav_dc8"):
+            plane = "DC8"
+
+        writer = FlightTrackCzmlWriter(reader.length, plane)
         writer.set_time(reader.time_window, reader.time_steps)
         writer.set_position(reader.longitude, reader.latitude, reader.altitude)
         writer.set_orientation(reader.roll, reader.pitch, reader.heading)
@@ -47,7 +53,7 @@ def data_pre_process(bucket_name="ghrc-fcx-field-campaigns-szg", field_campaign 
         output_czml = writer.get_string()
         output_name = os.path.splitext(os.path.basename(infile))[0]
         output_name_wo_time = output_name.split("-")[0];
-        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_name_wo_time}.czml"
+        outfile = f"{field_campaign}/{output_data_dir}/{instrument_name}/{output_name_wo_time}_new.czml" #update this
         s3_client.put_object(Body=output_czml, Bucket=bucket_name, Key=outfile)
         print(infile+" conversion done.")
 
@@ -89,5 +95,5 @@ def dc8():
     }
     data_pre_process(bucket_name, field_campaign, input_data_dir, output_data_dir, instrument_name, row_name_index_map)
     
-er2()
+# er2()
 dc8()

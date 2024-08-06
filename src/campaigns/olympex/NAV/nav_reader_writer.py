@@ -41,13 +41,18 @@ czml_head = {
     "version": "1.0"
 }
 
+track_color = {'ER2': [0, 255, 128, 255],
+              'DC8': [0, 128, 255, 255]}
+
 # class declaration
 
 class FlightTrackCzmlWriter:
 
-    def __init__(self, length):
+    def __init__(self, length, plane):
         self.model = deepcopy(model)
         self.length = length
+        self.model['name'] = plane
+        self.model['path']['material']['solidColor']['color']['rgba'] = track_color[plane]
         self.model['position']['cartographicDegrees'] = [0] * 4 * length
         self.model['properties']['roll']['number'] = [0] * 2 * length
         self.model['properties']['pitch']['number'] = [0] * 2 * length
